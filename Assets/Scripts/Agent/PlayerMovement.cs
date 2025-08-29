@@ -3,9 +3,12 @@ using UnityEngine;
 public class PlayerMovement : AgentMovement
 {
     [SerializeField] private InputSO input;
+    [SerializeField] private Transform camTrm;
+    [SerializeField] private float camHeight;
     private CharacterController controller;
     public float speed = 5f;
     public float jumpPower = 5f;
+    public float camRotSpeed = 15f;
     private float yVelocity = 0f;
     private float gravity = -9.81f;
     private bool jumpPress = false;
@@ -26,6 +29,15 @@ public class PlayerMovement : AgentMovement
         Vector3 move = new Vector3(moveDir.x, 0, moveDir.y);
         move = transform.TransformDirection(move);
         move *= speed;
+
+        if (move.sqrMagnitude > 0f)
+        {
+            // 카메라의 y축을 기준으로 월드 forward 방향으로 회전
+            Vector3 worldForward = Quaternion.Euler(0, camTrm.eulerAngles.y, 0) * Vector3.forward;
+            Quaternion targetRot = Quaternion.LookRotation(worldForward, Vector3.up);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * camRotSpeed);
+        }
+        camTrm.position = transform.position + Vector3.up * camHeight;
 
         // 중력 적용
         if (controller.isGrounded)
