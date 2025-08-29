@@ -29,6 +29,11 @@ public class InputSO : ScriptableObject, InputSystem_Actions.IPlayerActions
         return input.Player.Move.ReadValue<Vector2>();
     }
 
+    public Vector2 GetLookDir()
+    {
+        return input.Player.Look.ReadValue<Vector2>();
+    }
+
     public void OnMove(InputAction.CallbackContext context)
     {
     }
