@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 public class InputSO : ScriptableObject, InputSystem_Actions.IPlayerActions
 {
     private InputSystem_Actions input;
-    public event Action OnJumpPress;
+    public event Action<bool> OnJumpChange;
 
     void OnEnable()
     {
@@ -51,8 +51,7 @@ public class InputSO : ScriptableObject, InputSystem_Actions.IPlayerActions
 
     public void OnJump(InputAction.CallbackContext context)
     {
-        if (context.performed)
-            OnJumpPress?.Invoke();
+        OnJumpChange?.Invoke(context.performed);
     }
 
     public void OnPrevious(InputAction.CallbackContext context)
