@@ -20,7 +20,7 @@ public class PlayerMovement : AgentMovement
         input.OnJumpChange += HandleChangeJump;
     }
 
-    private void Update()
+    protected override void Update()
     {
         if (controller == null) return;
 
