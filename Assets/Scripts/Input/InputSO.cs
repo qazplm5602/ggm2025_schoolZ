@@ -7,6 +7,7 @@ public class InputSO : ScriptableObject, InputSystem_Actions.IPlayerActions
 {
     private InputSystem_Actions input;
     public event Action<bool> OnJumpChange;
+    public event Action OnInteractPress;
 
     void OnEnable()
     {
@@ -48,6 +49,8 @@ public class InputSO : ScriptableObject, InputSystem_Actions.IPlayerActions
 
     public void OnInteract(InputAction.CallbackContext context)
     {
+        if (context.performed)
+            OnInteractPress?.Invoke();
     }
 
     public void OnCrouch(InputAction.CallbackContext context)
