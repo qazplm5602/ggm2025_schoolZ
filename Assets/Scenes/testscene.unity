@@ -15473,6 +15473,11 @@ Transform:
   - {fileID: 791391159}
   m_Father: {fileID: 707540414}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!4 &594556308 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4526481168638136910, guid: 66ac27626809f834ebf5afc43bf27fe0, type: 3}
+  m_PrefabInstance: {fileID: 1241430710}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &595066422
 GameObject:
   m_ObjectHideFlags: 0
@@ -31940,6 +31945,63 @@ Transform:
   - {fileID: 946402128}
   m_Father: {fileID: 597955499}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &1241430710
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 245505251323599257}
+    m_Modifications:
+    - target: {fileID: 121969441345726177, guid: 66ac27626809f834ebf5afc43bf27fe0, type: 3}
+      propertyPath: m_Name
+      value: SimpleHealthBar
+      objectReference: {fileID: 0}
+    - target: {fileID: 4526481168638136910, guid: 66ac27626809f834ebf5afc43bf27fe0, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4526481168638136910, guid: 66ac27626809f834ebf5afc43bf27fe0, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4526481168638136910, guid: 66ac27626809f834ebf5afc43bf27fe0, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4526481168638136910, guid: 66ac27626809f834ebf5afc43bf27fe0, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4526481168638136910, guid: 66ac27626809f834ebf5afc43bf27fe0, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4526481168638136910, guid: 66ac27626809f834ebf5afc43bf27fe0, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4526481168638136910, guid: 66ac27626809f834ebf5afc43bf27fe0, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4526481168638136910, guid: 66ac27626809f834ebf5afc43bf27fe0, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4526481168638136910, guid: 66ac27626809f834ebf5afc43bf27fe0, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4526481168638136910, guid: 66ac27626809f834ebf5afc43bf27fe0, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 66ac27626809f834ebf5afc43bf27fe0, type: 3}
 --- !u!1 &1245008489
 GameObject:
   m_ObjectHideFlags: 0
@@ -54295,7 +54357,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 2993622027691901358, guid: ee1b47054e8a0b54bb0e557cae5c4022, type: 3}
+      insertIndex: 0
+      addedObject: {fileID: 594556308}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 6696010675192090234, guid: ee1b47054e8a0b54bb0e557cae5c4022, type: 3}
       insertIndex: -1
@@ -54355,7 +54420,7 @@ MonoBehaviour:
   maxHealth: 100
   moveSpeed: 3
   goldReward: 10
-  healthBarPrefab: {fileID: 121969441345726177, guid: 66ac27626809f834ebf5afc43bf27fe0, type: 3}
+  healthBarPrefab: {fileID: 0}
   deathEffect: {fileID: 0}
   enablePlayerTracking: 1
   playerTag: Player
@@ -54410,6 +54475,11 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!4 &245505251323599257 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2993622027691901358, guid: ee1b47054e8a0b54bb0e557cae5c4022, type: 3}
+  m_PrefabInstance: {fileID: 245505251323599249}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &247125520660020711
 Transform:
   m_ObjectHideFlags: 0

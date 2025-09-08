@@ -45,7 +45,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   healthBarTransform: {fileID: 0}
-  healthBarHeight: 2
+  healthBarHeight: 1.4
+  autoAdjustHeight: 1
   healthBarScale: {x: 1, y: 0.1, z: 0.02}
   backgroundMaterial: {fileID: 2100000, guid: 5476fa430fc25db4f92259a5184278a0, type: 2}
   fillMaterial: {fileID: 2100000, guid: 285b15e8bc32be74d8e1c20ec66793fd, type: 2}

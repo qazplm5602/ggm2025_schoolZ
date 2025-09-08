@@ -79,10 +79,9 @@ public class SimpleHealthBar : MonoBehaviour
         fillBar.name = "Fill";
         fillBar.transform.SetParent(backgroundBar.transform);
 
-        // 크기에 맞게 위치와 스케일 조절
-        float fillOffsetX = -adjustedScale.x * 0.45f; // 배경의 왼쪽으로 이동
-        fillBar.transform.localPosition = new Vector3(fillOffsetX, 0, 0.01f);
-        fillBar.transform.localScale = new Vector3(adjustedScale.x * 0.9f, adjustedScale.y * 0.8f, adjustedScale.z);
+        // 부모의 영향을 받지 않도록 초기 크기 설정
+        fillBar.transform.localPosition = new Vector3(0, 0, -5f); // 왼쪽 끝, 더 앞으로 이동
+        fillBar.transform.localScale = new Vector3(1f, 1f, 1f); // 부모의 스케일을 고려한 상대적 크기
 
         if (fillMaterial != null)
         {
@@ -102,62 +101,58 @@ public class SimpleHealthBar : MonoBehaviour
     {
         maxHealth = maxHp;
         currentHealth = currentHp;
-        UpdateHealthBar();
+        // LateUpdate에서 처리하므로 별도 호출 불필요
     }
 
     public void UpdateHealth(float newCurrentHp)
     {
         currentHealth = Mathf.Clamp(newCurrentHp, 0, maxHealth);
-        UpdateHealthBar();
-    }
-
-    private void UpdateHealthBar()
-    {
-        if (fillBar != null && backgroundBar != null)
-        {
-            float healthRatio = currentHealth / maxHealth;
-
-            // 배경 바의 현재 크기를 기준으로 채우기 바 크기 계산
-            Vector3 bgScale = backgroundBar.transform.localScale;
-            float fillScaleX = healthRatio * bgScale.x * 0.9f;
-
-            // 채우기 바 크기 업데이트
-            fillBar.transform.localScale = new Vector3(fillScaleX, bgScale.y * 0.8f, bgScale.z);
-
-            // 채우기 바 위치 업데이트 (왼쪽 정렬)
-            float fillOffsetX = -bgScale.x * 0.45f + (fillScaleX * 0.5f) - (bgScale.x * 0.9f * 0.5f);
-            fillBar.transform.localPosition = new Vector3(fillOffsetX, 0, 0.01f);
-
-            // 체력에 따른 색상 변경
-            Renderer fillRenderer = fillBar.GetComponent<Renderer>();
-            if (healthRatio > 0.6f)
-            {
-                fillRenderer.material.color = Color.green;
-            }
-            else if (healthRatio > 0.3f)
-            {
-                fillRenderer.material.color = Color.yellow;
-            }
-            else
-            {
-                fillRenderer.material.color = Color.red;
-            }
-
-            // 체력이 0이면 숨김
-            fillBar.SetActive(currentHealth > 0);
-        }
+        // LateUpdate에서 처리하므로 여기서는 값만 업데이트
     }
 
     private void LateUpdate()
     {
-        // 체력바가 항상 카메라를 바라보도록 회전
+        // 체력바가 항상 카메라를 바라보도록 회전 및 체력바 업데이트
         if (backgroundBar != null)
         {
             Camera mainCamera = Camera.main;
             if (mainCamera != null)
             {
+                // 1. 배경바 회전 설정
                 backgroundBar.transform.LookAt(mainCamera.transform);
                 backgroundBar.transform.Rotate(0, 180, 0);
+
+                // 2. 체력바 업데이트
+                if (fillBar != null)
+                {
+                    float healthRatio = currentHealth / maxHealth;
+
+                    // 채우기 바 크기 업데이트
+                    float fillScaleX = healthRatio;
+                    fillBar.transform.localScale = new Vector3(fillScaleX, 1f, 1f);
+
+                    // 채우기 바 위치 업데이트
+                    float fillOffsetX = -0.5f + (fillScaleX * 0.5f);
+                    fillBar.transform.localPosition = new Vector3(fillOffsetX, 0, -0.1f);
+
+                    // 체력에 따른 색상 변경
+                    Renderer fillRenderer = fillBar.GetComponent<Renderer>();
+                    if (healthRatio > 0.6f)
+                    {
+                        fillRenderer.material.color = Color.green;
+                    }
+                    else if (healthRatio > 0.3f)
+                    {
+                        fillRenderer.material.color = Color.yellow;
+                    }
+                    else
+                    {
+                        fillRenderer.material.color = Color.red;
+                    }
+
+                    // 체력이 0이면 숨김
+                    fillBar.SetActive(currentHealth > 0);
+                }
             }
         }
     }

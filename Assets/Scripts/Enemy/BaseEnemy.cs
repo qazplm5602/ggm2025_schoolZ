@@ -25,6 +25,7 @@ public abstract class BaseEnemy : Agent, IEnemy
     protected Transform healthBarTransform;
     protected AgentMovement agentMovement;
     protected Transform playerTransform; // 플레이어 Transform
+    protected SimpleHealthBar healthBar; // 체력바 컴포넌트
     
     protected virtual void Start()
     {
@@ -70,8 +71,24 @@ public abstract class BaseEnemy : Agent, IEnemy
         // 체력바 생성 (옵션)
         if (healthBarPrefab != null)
         {
-            GameObject healthBar = Instantiate(healthBarPrefab, transform);
-            healthBarTransform = healthBar.transform;
+            GameObject healthBarObj = Instantiate(healthBarPrefab, transform);
+            healthBarTransform = healthBarObj.transform;
+
+            // SimpleHealthBar 컴포넌트 찾기
+            healthBar = healthBarObj.GetComponent<SimpleHealthBar>();
+            if (healthBar != null)
+            {
+                healthBar.Initialize(MaxHealth, CurrentHealth);
+            }
+        }
+        else
+        {
+            // 체력바 프리팹이 없으면 컴포넌트로 직접 찾기 (자식 포함)
+            healthBar = GetComponentInChildren<SimpleHealthBar>();
+            if (healthBar != null)
+            {
+                healthBar.Initialize(MaxHealth, CurrentHealth);
+            }
         }
     }
     
@@ -84,15 +101,18 @@ public abstract class BaseEnemy : Agent, IEnemy
     public virtual void TakeDamage(float damage)
     {
         if (!IsAlive) return;
-        
+
         CurrentHealth -= damage;
         CurrentHealth = Mathf.Max(0, CurrentHealth);
-        
+
         Debug.Log($"{gameObject.name}이 {damage} 데미지를 받았습니다. 남은 체력: {CurrentHealth}");
-        
+
+        // 체력바 업데이트
+        UpdateHealthBar();
+
         // 데미지 받을 때 추가 효과
         OnTakeDamage(damage);
-        
+
         if (CurrentHealth <= 0)
         {
             Die();
@@ -134,6 +154,14 @@ public abstract class BaseEnemy : Agent, IEnemy
     
     protected virtual void UpdateHealthBar()
     {
+        // SimpleHealthBar 컴포넌트가 있으면 사용
+        if (healthBar != null)
+        {
+            healthBar.UpdateHealth(CurrentHealth);
+            return;
+        }
+
+        // 기존 방식 (healthBarTransform이 있는 경우)
         if (healthBarTransform != null)
         {
             // 체력바가 항상 카메라를 향하도록
@@ -143,7 +171,7 @@ public abstract class BaseEnemy : Agent, IEnemy
                 healthBarTransform.LookAt(mainCamera.transform);
                 healthBarTransform.Rotate(0, 180, 0);
             }
-            
+
             // 체력 비율에 따라 스케일 조정 (간단한 방법)
             float healthRatio = CurrentHealth / MaxHealth;
             // 실제 체력바 UI 업데이트는 여기서 처리
