@@ -18,7 +18,7 @@ public class TowerData : ScriptableObject
     [Header("Combat Stats")]
     public float attackRange = 5f;
     public float attackDamage = 10f;
-    public float attackSpeed = 1f; // 초당 공격 횟수
+    public float attackCooltime = 1f; // 초당 공격 횟수
 
     [Header("Ranged Tower Settings")]
     public GameObject projectilePrefab;

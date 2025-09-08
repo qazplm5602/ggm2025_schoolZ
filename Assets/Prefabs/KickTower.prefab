@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4634013910974366385}
+  - component: {fileID: 286234839507421047}
   m_Layer: 0
   m_Name: KickTower
   m_TagString: Untagged
@@ -32,6 +33,27 @@ Transform:
   - {fileID: 671505473105751509}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &286234839507421047
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1262148723271048529}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f1d43e86642daba43b401b4583c6306e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  towerData: {fileID: 11400000, guid: ade933c88fa71e841babaf2459df653e, type: 2}
+  enemyLayer:
+    serializedVersion: 2
+    m_Bits: 128
+  muzzleFlash: {fileID: 0}
+  upgradeEffect: {fileID: 0}
+  slashEffect: {fileID: 0}
+  towerAnimator: {fileID: 0}
+  attackAnimationName: Attack
 --- !u!1001 &804477100930834006
 PrefabInstance:
   m_ObjectHideFlags: 0

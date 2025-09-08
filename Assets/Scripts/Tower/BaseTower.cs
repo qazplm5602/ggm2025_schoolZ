@@ -15,7 +15,7 @@ public abstract class BaseTower : MonoBehaviour
     // 타워 기본 프로퍼티들
     public virtual float AttackRange => towerData?.attackRange ?? 5f;
     public virtual float AttackDamage => towerData?.attackDamage ?? 10f;
-    public virtual float AttackSpeed => towerData?.attackSpeed ?? 1f;
+    public virtual float AttackCooltime => towerData?.attackCooltime ?? 1f;
     public bool IsAttacking { get; protected set; }
     
     // 보호된 필드들
@@ -179,7 +179,7 @@ public abstract class BaseTower : MonoBehaviour
         if (Time.time >= nextAttackTime)
         {
             PerformAttack();
-            nextAttackTime = Time.time + (1f / AttackSpeed);
+            nextAttackTime = Time.time + AttackCooltime;
         }
     }
     

@@ -12,13 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7d20e666fd9fa2e469d8cf385e12ceb2, type: 3}
   m_Name: KickTowerData
   m_EditorClassIdentifier: 
-  towerName: "\uADFC\uC811 \uD0C0\uC6CC"
+  towerName: "\uBC1C\uCC28\uAE30 \uD0C0\uC6CC"
   towerType: 1
   towerIcon: {fileID: 0}
   cost: 100
   attackRange: 3
   attackDamage: 20
-  attackSpeed: 1
+  attackCooltime: 2
   projectilePrefab: {fileID: 0}
   projectileSpeed: 10
   canUpgrade: 0

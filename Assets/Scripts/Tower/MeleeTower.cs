@@ -4,49 +4,39 @@ using System.Collections.Generic;
 public class MeleeTower : BaseTower
 {
     [Header("Melee Tower Settings")]
-    [SerializeField] private float meleeRadius = 2f;
-    [SerializeField] private int maxTargets = 3;
     [SerializeField] private GameObject slashEffect;
     
     [Header("Animation")]
     [SerializeField] private Animator towerAnimator;
-    [SerializeField] private string attackAnimationName = "Attack";
+    [SerializeField] private string attackAnimationName;
     
     private List<Transform> currentTargets = new List<Transform>();
     
-    protected override void Start()
+    protected override void ApplyTowerData()
     {
-        base.Start();
-        
-        // TowerData에서 근접 공격 정보 가져오기
-        if (towerData != null)
-        {
-            meleeRadius = towerData.meleeRadius;
-            maxTargets = towerData.maxTargets;
-        }
-        
-        // 애니메이터 자동 찾기
+        // maxTargets 설정 제거 - 제한 없이 모든 적 공격
+        // TowerData의 다른 설정들은 BaseTower에서 처리됨
+
+        // 애니메이터 자동 찾기 (자식 객체 포함)
         if (towerAnimator == null)
-            towerAnimator = GetComponent<Animator>();
-            
-        StartAttacking(); // 자동으로 공격 시작
+            towerAnimator = GetComponentInChildren<Animator>();
     }
     
     protected override void FindTarget()
     {
-        // 근접 타워는 여러 타겟을 동시에 공격할 수 있음
+        // 근접 타워는 범위 내 모든 적을 동시에 공격할 수 있음
         currentTargets.Clear();
-        
-        Collider[] enemiesInRange = Physics.OverlapSphere(transform.position, meleeRadius, enemyLayer);
-        
+
+        Collider[] enemiesInRange = Physics.OverlapSphere(transform.position, AttackRange, enemyLayer);
+
         foreach (Collider enemy in enemiesInRange)
         {
-            if (enemy.GetComponent<IEnemy>() != null && currentTargets.Count < maxTargets)
+            if (enemy.GetComponent<IEnemy>() != null)
             {
                 currentTargets.Add(enemy.transform);
             }
         }
-        
+
         // 주 타겟 설정 (가장 가까운 적)
         if (currentTargets.Count > 0)
         {
@@ -83,44 +73,50 @@ public class MeleeTower : BaseTower
     {
         if (target == null) return false;
         float distance = Vector3.Distance(transform.position, target.position);
-        return distance <= meleeRadius;
+        return distance <= AttackRange;
     }
     
     protected override void PerformAttack()
     {
         if (currentTargets.Count == 0) return;
-        
+
         // 애니메이션 재생
         if (towerAnimator != null && !string.IsNullOrEmpty(attackAnimationName))
         {
             towerAnimator.SetTrigger(attackAnimationName);
         }
-        
-        // 범위 내 모든 적에게 데미지 적용
-        AttackAllTargetsInRange();
-        
+
         // 공격 이펙트 재생
         PlayAttackEffects();
-        
+
+        // 0.1초 딜레이 후 데미지 적용
+        StartCoroutine(ApplyDamageWithDelay(0.1f));
+    }
+
+    private System.Collections.IEnumerator ApplyDamageWithDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+
+        // 범위 내 모든 적에게 데미지 적용
+        AttackAllTargetsInRange();
+
         Debug.Log($"근접 타워가 {currentTargets.Count}명의 적을 공격했습니다!");
     }
     
     private void AttackAllTargetsInRange()
     {
-        // 현재 범위 내의 모든 적을 다시 확인
-        Collider[] enemiesInRange = Physics.OverlapSphere(transform.position, meleeRadius, enemyLayer);
-        
-        int attackCount = 0;
+        // 현재 범위 내의 모든 적을 공격 (제한 없음)
+        Collider[] enemiesInRange = Physics.OverlapSphere(transform.position, AttackRange, enemyLayer);
+
+        int attackedCount = 0;
         foreach (Collider enemyCollider in enemiesInRange)
         {
-            if (attackCount >= maxTargets) break;
-            
             IEnemy enemy = enemyCollider.GetComponent<IEnemy>();
             if (enemy != null)
             {
                 enemy.TakeDamage(AttackDamage);
-                attackCount++;
-                
+                attackedCount++;
+
                 // 개별 타격 이펙트 (옵션)
                 if (slashEffect != null)
                 {
@@ -129,6 +125,8 @@ public class MeleeTower : BaseTower
                 }
             }
         }
+
+        Debug.Log($"근접 타워가 {attackedCount}명의 적을 공격했습니다!");
     }
     
     private void PlayAttackEffects()
@@ -141,21 +139,15 @@ public class MeleeTower : BaseTower
     protected override void OnUpgraded()
     {
         base.OnUpgraded();
-        
-        // 업그레이드 시 근접 공격 정보 갱신
-        if (towerData != null)
-        {
-            meleeRadius = towerData.meleeRadius;
-            maxTargets = towerData.maxTargets;
-        }
+        // ApplyTowerData()가 자동으로 호출되므로 별도 처리 불필요
     }
     
     protected override void OnDrawGizmosSelected()
     {
         // 근접 공격 범위 시각화
         Gizmos.color = Color.blue;
-        Gizmos.DrawWireSphere(transform.position, meleeRadius);
-        
+        Gizmos.DrawWireSphere(transform.position, AttackRange);
+
         // 현재 타겟들 표시
         Gizmos.color = Color.yellow;
         foreach (Transform target in currentTargets)
@@ -165,7 +157,7 @@ public class MeleeTower : BaseTower
                 Gizmos.DrawLine(transform.position, target.position);
             }
         }
-        
+
         // 기본 범위도 표시
         base.OnDrawGizmosSelected();
     }
