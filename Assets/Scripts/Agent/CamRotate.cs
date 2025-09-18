@@ -14,6 +14,12 @@ public class CamRotate : MonoBehaviour
 
     void Update()
     {
+        // UI가 활성화되면 카메라 회전을 중지
+        if (TowerPlacementSystem.Instance != null && TowerPlacementSystem.Instance.IsUIActive)
+        {
+            return;
+        }
+
         Vector2 mouseDir = input.GetLookDir() * mouseSensitivity * Time.deltaTime;
 
         // y축(좌우) 회전: 카메라 자체에서 처리

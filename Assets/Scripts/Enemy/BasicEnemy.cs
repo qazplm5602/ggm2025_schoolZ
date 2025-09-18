@@ -22,17 +22,7 @@ public class BasicEnemy : BaseEnemy
     }
     
     public override float MoveSpeed => moveSpeed;
-
-    protected override void Update()
-    {
-        base.Update();
-
-        // 이동 속도 동기화
-        if (agentMovement != null)
-        {
-            agentMovement.moveSpeed = MoveSpeed;
-        }
-    }
+    
     
     protected override void OnTakeDamage(float damage)
     {
@@ -71,6 +61,5 @@ public class BasicEnemy : BaseEnemy
         base.OnDie();
         
         // 기본 적이 죽을 때의 추가 효과
-        Debug.Log("기본 적이 처치되었습니다!");
     }
 }

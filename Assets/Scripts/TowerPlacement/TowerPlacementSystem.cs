@@ -2,6 +2,26 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
+using System.Collections;
+using DG.Tweening;
+
+/// <summary>
+/// 클릭 가능한 오브젝트 인터페이스
+/// </summary>
+public interface IClickable
+{
+    event System.Action OnClicked;
+}
+
+/// <summary>
+/// UI 모드 열거형
+/// </summary>
+public enum UIMode
+{
+    Placement,  // 타워 생성 모드
+    Upgrade     // 업그레이드 모드
+}
 
 /// <summary>
 /// 타워 생성 시스템 메인 매니저
@@ -11,24 +31,31 @@ public class TowerPlacementSystem : MonoBehaviour
 {
     public static TowerPlacementSystem Instance { get; private set; }
 
-    [Header("UI 설정")]
-    [SerializeField] private GameObject placementUI; // 타워 선택 UI 패널
-    [SerializeField] private Button[] towerButtons; // 타워 선택 버튼들
-    [SerializeField] private TextMeshProUGUI goldText; // 골드 표시 텍스트
+    [Header("통합 UI 설정")]
+    [Tooltip("하나의 통합 UI 패널 (생성/업그레이드 모두 사용)")]
+    [SerializeField] private GameObject mainUI;
+
+    [Tooltip("액션 오브젝트들 (최대 2개: 0=첫 번째 옵션, 1=두 번째 옵션)")]
+    [SerializeField] private GameObject[] actionObjects;
+
+    [Tooltip("골드 표시 텍스트")]
+    [SerializeField] private TextMeshProUGUI goldText;
 
     [Header("타워 설정")]
+    [Tooltip("SO/Towers/ 폴더의 TowerData를 가진 타워 프리팹들을 연결하세요")]
     [SerializeField] private GameObject[] towerPrefabs; // 타워 프리팹들
-    [SerializeField] private int[] towerCosts = { 100, 150, 200, 300 }; // 타워 가격들
-    [SerializeField] private string[] towerNames = { "Melee Tower", "Ranged Tower", "Special Tower", "Ultimate Tower" }; // 타워 이름들
 
     [Header("시스템 설정")]
-    [SerializeField] private int initialGold = 1000; // 초기 골드
+    // 골드 관리는 GameManager로 위임됨
 
     // 현재 상태
     private TowerPlacementZone activeZone; // 현재 활성화된 설치 위치
-    private int currentGold; // 현재 골드
     private System.Collections.Generic.List<TowerPlacementZone> nearbyZones = new System.Collections.Generic.List<TowerPlacementZone>(); // 가까운 Zone들
     private Transform playerTransform; // 플레이어 Transform
+    private BaseTower selectedTower; // 선택된 타워 (업그레이드용)
+    private bool isUIAnimating = false; // UI 애니메이션 진행 중 여부
+    private bool isUIShowing = false; // UI가 완전히 표시되고 있는 상태
+    private UIMode currentMode; // 현재 UI 모드
 
     private void Awake()
     {
@@ -50,31 +77,63 @@ public class TowerPlacementSystem : MonoBehaviour
             Debug.LogError("Player 태그를 가진 오브젝트를 찾을 수 없습니다!");
         }
 
-        // 초기 골드 설정
-        currentGold = initialGold;
+        // 골드 관리는 GameManager로 위임됨
     }
 
     private void Start()
     {
         // UI 초기화
-        if (placementUI != null)
+        if (mainUI != null)
         {
-            placementUI.SetActive(false);
+            mainUI.SetActive(false);
         }
 
-        // 버튼 이벤트 연결
-        SetupTowerButtons();
+        // 액션 오브젝트 이벤트 연결
+        SetupActionObjects();
 
         // 골드 표시 업데이트
-        UpdateGoldDisplay();
+        if (GameManager.Instance != null)
+        {
+            UpdateGoldDisplay(GameManager.Instance.CurrentGold);
+        }
+
+        // 골드 변경 이벤트 구독
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.OnGoldChanged += UpdateGoldDisplay;
+        }
+
+        // 초기 모드 설정
+        currentMode = UIMode.Placement;
     }
+
+    /// <summary>
+    /// UI가 현재 활성화되어 있는지 확인
+    /// </summary>
+    public bool IsUIActive => mainUI != null && mainUI.activeSelf;
 
     private void Update()
     {
-        // Tab 키로 UI 토글
-        if (Keyboard.current != null && Keyboard.current.tabKey.wasPressedThisFrame)
+        // Tab 키로 생성 UI 토글 (애니메이션 진행 중이 아닐 때만)
+        if (Keyboard.current != null && Keyboard.current.tabKey.wasPressedThisFrame && !isUIAnimating)
         {
             ToggleUI();
+        }
+
+        // UI 상태 모니터링 (디버깅용) - UI가 완전히 표시된 상태에서만 체크
+        if (isUIShowing && mainUI != null && mainUI.activeSelf &&
+            selectedTower == null && activeZone == null)
+        {
+            Debug.LogWarning("비정상 상태 감지: UI가 활성화되어 있지만 타워나 존이 선택되지 않았습니다.");
+        }
+
+        // ESC 키로 메인 UI 닫기 (애니메이션 진행 중이 아닐 때만)
+        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame && !isUIAnimating)
+        {
+            if (mainUI != null && mainUI.activeSelf)
+            {
+                HideMainUI();
+            }
         }
     }
 
@@ -83,52 +142,461 @@ public class TowerPlacementSystem : MonoBehaviour
     /// </summary>
     private void ToggleUI()
     {
-        // 현재 UI가 표시되어 있는지 확인
-        bool isUIShowing = placementUI != null && placementUI.activeSelf;
-
-        if (isUIShowing)
+        // 메인 UI가 표시되어 있다면 먼저 닫기
+        if (mainUI != null && mainUI.activeSelf)
         {
-            // UI 숨김
-            HideUI();
+            HideMainUI();
+            return;
+        }
+
+        // 1. 설치된 타워가 있는 Zone들을 확인 (업그레이드 우선)
+        UpdateNearbyZones();
+        var occupiedZones = nearbyZones.FindAll(zone => zone.IsOccupied());
+
+        if (occupiedZones.Count > 0)
+        {
+            // 설치된 타워가 있는 경우 - 업그레이드 모드로 UI 표시
+            currentMode = UIMode.Upgrade;
+            ShowUpgradeUIForOccupiedZones(occupiedZones);
+        }
+        else if (nearbyZones.Count > 0)
+        {
+            // 빈 설치 위치가 있는 경우 - 생성 모드로 UI 표시
+            var closestZone = FindClosestEmptyZone();
+            if (closestZone != null)
+            {
+                activeZone = closestZone;
+                currentMode = UIMode.Placement;
+                ShowMainUI();
+            }
         }
         else
         {
-            // 가까운 Zone들을 확인하고 UI 표시
-            UpdateNearbyZones();
+        }
+    }
 
-            if (nearbyZones.Count > 0)
+    /// <summary>
+    /// 가장 가까운 빈 Zone 찾기
+    /// </summary>
+    private TowerPlacementZone FindClosestEmptyZone()
+    {
+        if (nearbyZones.Count == 0 || playerTransform == null) return null;
+
+        TowerPlacementZone closestZone = null;
+        float closestDistance = float.MaxValue;
+
+        foreach (TowerPlacementZone zone in nearbyZones)
+        {
+            if (!zone.IsOccupied()) // 빈 Zone만
             {
-                ShowUI();
+                float distance = Vector3.Distance(zone.transform.position, playerTransform.position);
+                if (distance < closestDistance)
+                {
+                    closestDistance = distance;
+                    closestZone = zone;
+                }
             }
-            else
+        }
+
+        return closestZone;
+    }
+
+    /// <summary>
+    /// 통합 액션 오브젝트들 설정 (클릭 이벤트 연결)
+    /// </summary>
+    private void SetupActionObjects()
+    {
+        if (actionObjects == null || actionObjects.Length == 0) return;
+
+        for (int i = 0; i < actionObjects.Length; i++)
+        {
+            int objectIndex = i; // 클로저 문제 해결
+            GameObject actionObj = actionObjects[i];
+
+            if (actionObj != null)
             {
-                Debug.Log("가까운 설치 가능 위치가 없습니다!");
+                // ClickableObject 컴포넌트가 있다면 이벤트 연결 및 초기화
+                var clickableObj = actionObj.GetComponent<ClickableObject>();
+                if (clickableObj != null)
+                {
+                    // 인덱스 설정
+                    clickableObj.SetObjectIndex(objectIndex);
+
+                    // 클릭 이벤트 연결 (OnClickedWithIndex 사용)
+                    clickableObj.OnClickedWithIndex += HandleActionObject;
+                }
+                else
+                {
+                    // ClickableObject가 없으면 EventTrigger로 대체
+                    SetupEventTrigger(actionObj, objectIndex);
+                }
             }
         }
     }
 
     /// <summary>
-    /// 타워 버튼들 설정
+    /// EventTrigger를 사용한 클릭 이벤트 설정
     /// </summary>
-    private void SetupTowerButtons()
+    private void SetupEventTrigger(GameObject actionObj, int objectIndex)
     {
-        if (towerButtons == null || towerButtons.Length == 0) return;
-
-        for (int i = 0; i < towerButtons.Length && i < towerPrefabs.Length; i++)
+        var eventTrigger = actionObj.GetComponent<EventTrigger>();
+        if (eventTrigger == null)
         {
-            int towerIndex = i; // 클로저 문제 해결
-            Button button = towerButtons[i];
+            eventTrigger = actionObj.AddComponent<EventTrigger>();
+        }
 
-            if (button != null)
+        // 기존 이벤트 클리어
+        eventTrigger.triggers.Clear();
+
+        // PointerClick 이벤트 추가
+        var clickEntry = new EventTrigger.Entry
+        {
+            eventID = EventTriggerType.PointerClick
+        };
+        clickEntry.callback.AddListener((data) => HandleActionObject(objectIndex));
+        eventTrigger.triggers.Add(clickEntry);
+    }
+
+    /// <summary>
+    /// 통합 액션 오브젝트 핸들러
+    /// </summary>
+    private void HandleActionObject(int objectIndex)
+    {
+        // UI 애니메이션이 진행 중일 때는 액션 무시
+        if (isUIAnimating)
+        {
+            Debug.Log("UI 애니메이션 진행 중이므로 액션 무시");
+            return;
+        }
+
+        Debug.Log($"HandleActionObject 호출: objectIndex={objectIndex}, currentMode={currentMode}");
+
+        switch (currentMode)
+        {
+            case UIMode.Placement:
+                Debug.Log("배치 모드로 타워 배치 시도");
+                TryPlaceTower(objectIndex);
+                break;
+            case UIMode.Upgrade:
+                Debug.Log("업그레이드 모드로 타워 업그레이드 시도");
+                TryUpgradeTower(objectIndex);
+                break;
+            default:
+                Debug.LogError($"알 수 없는 UI 모드: {currentMode}");
+                break;
+        }
+    }
+
+
+
+    /// <summary>
+    /// 설치된 타워가 있는 Zone들의 업그레이드 UI 표시
+    /// </summary>
+    private void ShowUpgradeUIForOccupiedZones(System.Collections.Generic.List<TowerPlacementZone> occupiedZones)
+    {
+        Debug.Log($"업그레이드 UI 표시 시도: occupiedZones={occupiedZones?.Count ?? 0}, mainUI={mainUI != null}, actionObjects={actionObjects != null}");
+
+        if (occupiedZones.Count == 0 || mainUI == null)
+        {
+            Debug.LogWarning("업그레이드 UI 표시 실패: 필수 컴포넌트가 null이거나 occupiedZones가 비어있음");
+            return;
+        }
+
+        if (playerTransform == null)
+        {
+            Debug.LogError("업그레이드 UI 표시 실패: playerTransform이 null입니다!");
+            return;
+        }
+
+        // 업그레이드 가능한 타워들을 찾기
+        var upgradeableTowers = new System.Collections.Generic.List<BaseTower>();
+        foreach (var zone in occupiedZones)
+        {
+            var tower = zone.GetPlacedTower();
+            if (tower != null)
             {
-                button.onClick.AddListener(() => TryPlaceTower(towerIndex));
-
-                // 버튼 텍스트 설정 (가격 표시)
-                TextMeshProUGUI buttonText = button.GetComponentInChildren<TextMeshProUGUI>();
-                if (buttonText != null)
+                Debug.Log($"Zone {zone.name}: tower={tower.name}, canUpgrade={tower.towerData?.canUpgrade ?? false}");
+                if (tower.towerData?.canUpgrade == true)
                 {
-                    buttonText.text = $"{towerNames[towerIndex]}\n{towerCosts[towerIndex]}G";
+                    upgradeableTowers.Add(tower);
                 }
+            }
+            else
+            {
+                Debug.Log($"Zone {zone.name}: 타워가 배치되지 않음");
+            }
+        }
+
+        Debug.Log($"업그레이드 가능한 타워 수: {upgradeableTowers.Count}");
+
+        if (upgradeableTowers.Count == 0)
+        {
+            Debug.LogWarning("업그레이드 UI 표시 실패: 업그레이드 가능한 타워가 없습니다");
+            return;
+        }
+
+        // 가장 가까운 업그레이드 가능한 타워 선택
+        BaseTower closestTower = null;
+        float closestDistance = float.MaxValue;
+
+        foreach (var tower in upgradeableTowers)
+        {
+            float distance = Vector3.Distance(tower.transform.position, playerTransform.position);
+            Debug.Log($"타워 {tower.name}: 거리={distance:F2}");
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closestTower = tower;
+            }
+        }
+
+        if (closestTower == null)
+        {
+            Debug.LogError("업그레이드 UI 표시 실패: closestTower가 null입니다");
+            return;
+        }
+
+        Debug.Log($"선택된 타워: {closestTower.name} (거리: {closestDistance:F2})");
+
+        // 선택된 타워로 업그레이드 모드 UI 표시
+        selectedTower = closestTower;
+        ShowMainUI();
+    }
+
+    /// <summary>
+    /// 통합 메인 UI 표시 (Dotween 애니메이션 적용)
+    /// </summary>
+    private void ShowMainUI()
+    {
+        if (mainUI == null) return;
+
+        // 애니메이션 진행 중 표시
+        isUIAnimating = true;
+
+        // UI 내용 먼저 설정
+        switch (currentMode)
+        {
+            case UIMode.Placement:
+                ShowPlacementUI();
+                break;
+            case UIMode.Upgrade:
+                ShowUpgradeUI();
+                break;
+        }
+
+        // Dotween을 사용한 부드러운 UI 표시 애니메이션
+        CanvasGroup canvasGroup = mainUI.GetComponent<CanvasGroup>();
+        if (canvasGroup == null)
+        {
+            canvasGroup = mainUI.AddComponent<CanvasGroup>();
+        }
+
+        // 초기 상태 설정
+        mainUI.SetActive(true);
+        canvasGroup.alpha = 0f;
+        mainUI.transform.localScale = new Vector3(0.8f, 0.8f, 1f);
+
+        // 애니메이션 시퀀스 생성
+        Sequence showSequence = DOTween.Sequence();
+
+        // 스케일 업 + 페이드 인
+        showSequence.Append(mainUI.transform.DOScale(1f, 0.3f).SetEase(Ease.OutBack));
+        showSequence.Join(canvasGroup.DOFade(1f, 0.3f).SetEase(Ease.OutQuad));
+
+        // 애니메이션 완료 시 플래그 해제
+        showSequence.OnComplete(() => {
+            isUIAnimating = false;
+            isUIShowing = true; // UI 표시 완료
+            Debug.Log("메인 UI 표시 애니메이션 완료");
+        });
+
+        showSequence.Play();
+
+        // 마우스 커서 표시
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
+    }
+
+
+    /// <summary>
+    /// 타워 생성 UI 표시
+    /// </summary>
+    private void ShowPlacementUI()
+    {
+        if (mainUI == null || actionObjects == null) return;
+
+        // 점유된 zone에서는 타워 생성 UI를 표시하지 않음
+        if (activeZone != null && activeZone.IsOccupied())
+        {
+            return;
+        }
+
+        // 액션 오브젝트 텍스트들 업데이트
+        UpdateActionObjectTextsForPlacement();
+
+    }
+
+    /// <summary>
+    /// 타워 생성 모드용 액션 오브젝트 텍스트 업데이트
+    /// </summary>
+    private void UpdateActionObjectTextsForPlacement()
+    {
+        for (int i = 0; i < actionObjects.Length; i++)
+        {
+            GameObject actionObj = actionObjects[i];
+            if (actionObj != null)
+            {
+                if (i < towerPrefabs.Length)
+                {
+                    // ClickableObject를 사용해서 활성화, 텍스트 및 이미지 설정
+                    var clickableObj = actionObj.GetComponent<ClickableObject>();
+                    if (clickableObj != null)
+                    {
+                        clickableObj.SetActive(true);
+
+                        // 타워 프리팹에서 TowerData의 아이콘 가져오기
+                        var towerData = towerPrefabs[i].GetComponent<BaseTower>()?.towerData;
+                        Sprite towerIcon = (towerData != null) ? towerData.towerIcon : null;
+
+                        // TowerData에서 이름, 가격, 설명 가져오기
+                        string displayName = towerData?.towerName ?? $"Tower {i}";
+                        int displayCost = towerData?.cost ?? 100;
+                        string description = towerData?.description ?? "";
+
+                        // 타워 정보 모두 업데이트 (이름, 가격, 설명, 아이콘)
+                        clickableObj.UpdateTowerDisplay(displayName, displayCost, description, towerIcon);
+                    }
+                    else
+                    {
+                        // fallback에서도 TowerData 우선 사용
+                        var towerData = towerPrefabs[i].GetComponent<BaseTower>()?.towerData;
+                        string displayName = towerData?.towerName ?? $"Tower {i}";
+                        int displayCost = towerData?.cost ?? 100;
+                        string description = towerData?.description ?? "";
+
+                        actionObj.SetActive(true);
+                        SetActionObjectText(actionObj, $"{displayName}\n{displayCost}G");
+                    }
+                }
+                else
+                {
+                    // ClickableObject를 사용해서 비활성화
+                    var clickableObj = actionObj.GetComponent<ClickableObject>();
+                    if (clickableObj != null)
+                    {
+                        clickableObj.SetActive(false);
+                    }
+                    else
+                    {
+                        actionObj.SetActive(false);
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 업그레이드 UI 표시
+    /// </summary>
+    private void ShowUpgradeUI()
+    {
+        Debug.Log($"ShowUpgradeUI 호출: selectedTower={selectedTower != null}, mainUI={mainUI != null}, actionObjects={actionObjects != null}");
+
+        if (selectedTower == null || mainUI == null || actionObjects == null)
+        {
+            Debug.LogError("ShowUpgradeUI 실패: 필수 컴포넌트가 null입니다");
+            return;
+        }
+
+        // 업그레이드 옵션 조회
+        var upgradeOptions = selectedTower.GetAvailableUpgradeOptions();
+        Debug.Log($"업그레이드 옵션 수: {upgradeOptions?.Length ?? 0}");
+
+        if (upgradeOptions == null || upgradeOptions.Length == 0)
+        {
+            Debug.LogWarning("ShowUpgradeUI 실패: 업그레이드 옵션이 없습니다");
+            return;
+        }
+
+        // 각 업그레이드 옵션 정보 출력
+        for (int i = 0; i < upgradeOptions.Length; i++)
+        {
+            var option = upgradeOptions[i];
+            Debug.Log($"업그레이드 옵션 {i}: {option?.towerName ?? "null"}");
+        }
+
+        // 액션 오브젝트 텍스트들 업데이트
+        UpdateActionObjectTextsForUpgrade(upgradeOptions);
+
+    }
+
+    /// <summary>
+    /// 업그레이드 모드용 액션 오브젝트 텍스트 업데이트
+    /// </summary>
+    private void UpdateActionObjectTextsForUpgrade(TowerData[] upgradeOptions)
+    {
+        for (int i = 0; i < actionObjects.Length; i++)
+        {
+            GameObject actionObj = actionObjects[i];
+            if (actionObj != null)
+            {
+                if (i < upgradeOptions.Length)
+                {
+                    // ClickableObject를 사용해서 활성화, 텍스트 및 이미지 설정
+                    var clickableObj = actionObj.GetComponent<ClickableObject>();
+                    if (clickableObj != null)
+                    {
+                        clickableObj.SetActive(true);
+
+                        // 업그레이드 옵션 정보 모두 업데이트 (이름, 가격, 설명, 아이콘)
+                        clickableObj.UpdateTowerDisplay(
+                            upgradeOptions[i].towerName,
+                            upgradeOptions[i].cost,
+                            upgradeOptions[i].description,
+                            upgradeOptions[i].towerIcon
+                        );
+                    }
+                    else
+                    {
+                        actionObj.SetActive(true);
+                        SetActionObjectText(actionObj, upgradeOptions[i].towerName);
+                    }
+                }
+                else
+                {
+                    // ClickableObject를 사용해서 비활성화
+                    var clickableObj = actionObj.GetComponent<ClickableObject>();
+                    if (clickableObj != null)
+                    {
+                        clickableObj.SetActive(false);
+                    }
+                    else
+                    {
+                        actionObj.SetActive(false);
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 액션 오브젝트의 텍스트 설정 헬퍼 메소드
+    /// </summary>
+    private void SetActionObjectText(GameObject actionObj, string text)
+    {
+        // ClickableObject가 있다면 그걸 사용
+        var clickableObj = actionObj.GetComponent<ClickableObject>();
+        if (clickableObj != null)
+        {
+            clickableObj.UpdateDisplayText(text);
+        }
+        else
+        {
+            // ClickableObject가 없으면 직접 찾기
+            TextMeshProUGUI objText = actionObj.GetComponentInChildren<TextMeshProUGUI>();
+            if (objText != null)
+            {
+                objText.text = text;
             }
         }
     }
@@ -149,78 +617,192 @@ public class TowerPlacementSystem : MonoBehaviour
         // 각 Zone과 플레이어의 거리 확인
         foreach (TowerPlacementZone zone in allZones)
         {
-            if (zone.IsAvailable()) // 점유되지 않은 Zone만
-            {
-                float distance = Vector3.Distance(zone.transform.position, playerTransform.position);
-                if (distance <= 3f) // 기본 거리 범위
-                {
-                    nearbyZones.Add(zone);
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// UI 표시 (가장 가까운 Zone 선택)
-    /// </summary>
-    private void ShowUI()
-    {
-        if (nearbyZones.Count == 0 || playerTransform == null) return;
-
-        // 가장 가까운 Zone 찾기
-        TowerPlacementZone closestZone = null;
-        float closestDistance = float.MaxValue;
-
-        foreach (TowerPlacementZone zone in nearbyZones)
-        {
             float distance = Vector3.Distance(zone.transform.position, playerTransform.position);
-            if (distance < closestDistance)
+            if (distance <= 1.2f) // 좁은 거리 범위 (플레이어 주변 1.2m)
             {
-                closestDistance = distance;
-                closestZone = zone;
+                nearbyZones.Add(zone);
             }
-        }
-
-        if (closestZone == null) return;
-
-        if (activeZone == closestZone) return; // 이미 활성화된 위치면 무시
-
-        activeZone = closestZone;
-
-        if (placementUI != null)
-        {
-            placementUI.SetActive(true);
-
-            // 마우스 커서 표시 (UI가 표시될 때만)
-            Cursor.visible = true;
-            Cursor.lockState = CursorLockMode.None;
-
-            Debug.Log("타워 배치 UI 표시됨");
         }
     }
 
     /// <summary>
-    /// UI 숨김
+    /// 메인 UI 숨김 (Dotween 애니메이션 적용)
     /// </summary>
-    public void HideUI()
+    public void HideMainUI()
     {
-        if (activeZone == null) return;
+        Debug.Log($"HideMainUI 호출: mainUI={mainUI != null}, activeZone={activeZone != null}, selectedTower={selectedTower != null}");
+
+        // 애니메이션 진행 중 표시
+        isUIAnimating = true;
 
         activeZone = null;
+        selectedTower = null;
 
-        if (placementUI != null)
+        if (mainUI != null)
         {
-            placementUI.SetActive(false);
+            // Dotween을 사용한 부드러운 UI 숨김 애니메이션
+            CanvasGroup canvasGroup = mainUI.GetComponent<CanvasGroup>();
+            if (canvasGroup == null)
+            {
+                canvasGroup = mainUI.AddComponent<CanvasGroup>();
+            }
+
+            // 애니메이션 시퀀스 생성
+            Sequence hideSequence = DOTween.Sequence();
+
+            // 스케일 다운 + 페이드 아웃
+            hideSequence.Append(mainUI.transform.DOScale(0.8f, 0.2f).SetEase(Ease.InBack));
+            hideSequence.Join(canvasGroup.DOFade(0f, 0.2f).SetEase(Ease.InQuad));
+
+            // 애니메이션 완료 후 비활성화
+            hideSequence.OnComplete(() => {
+                mainUI.SetActive(false);
+                mainUI.transform.localScale = Vector3.one;
+                canvasGroup.alpha = 1f;
+                isUIAnimating = false; // 애니메이션 완료
+                isUIShowing = false; // UI 숨김 완료
+                Debug.Log("메인 UI가 부드럽게 비활성화되었습니다.");
+            });
+
+            hideSequence.Play();
 
             // 마우스 커서 숨김 (UI가 숨겨질 때)
             Cursor.visible = false;
             Cursor.lockState = CursorLockMode.Locked;
-
-            Debug.Log("타워 배치 UI 숨겨짐");
+        }
+        else
+        {
+            Debug.LogError("HideMainUI 실패: mainUI가 null입니다!");
         }
     }
 
     // 배치 모드 관련 메소드들은 제거됨 - UI 토글만 사용
+
+    /// <summary>
+    /// 타워 배치 시도 (외부 호출용)
+    /// </summary>
+    public void PlaceTowerAtActiveZone(int towerIndex)
+    {
+        TryPlaceTower(towerIndex);
+    }
+
+    /// <summary>
+    /// 타워 업그레이드 시도
+    /// </summary>
+    private void TryUpgradeTower(int upgradeIndex)
+    {
+        if (selectedTower == null)
+        {
+            return;
+        }
+
+        // 업그레이드 옵션 검증
+        var upgradeOptions = selectedTower.GetAvailableUpgradeOptions();
+        if (upgradeIndex < 0 || upgradeIndex >= upgradeOptions.Length)
+        {
+            Debug.LogError("유효하지 않은 업그레이드 옵션 인덱스입니다!");
+            return;
+        }
+
+        // 골드 확인 (GameManager 사용)
+        var upgradeOption = upgradeOptions[upgradeIndex];
+        int upgradeCost = upgradeOption.cost; // 기존 cost를 업그레이드 비용으로 사용
+
+        // 골드 부족 시 업그레이드 실패 메시지 표시
+        if (GameManager.Instance != null && !GameManager.Instance.SpendGold(upgradeCost))
+        {
+            Debug.Log($"업그레이드 실패: 골드 부족 (필요: {upgradeCost}G, 보유: {GameManager.Instance.CurrentGold}G)");
+            if (WaveManager.Instance != null)
+            {
+                WaveManager.Instance.ShowWarningMessage($"❌ 골드 부족! {upgradeCost}G 필요", 2f);
+            }
+            return;
+        }
+
+        // 업그레이드 실행
+        PerformTowerUpgrade(upgradeIndex, upgradeCost);
+    }
+
+    /// <summary>
+    /// 실제 타워 업그레이드 수행
+    /// </summary>
+    private void PerformTowerUpgrade(int upgradeIndex, int upgradeCost)
+    {
+        if (selectedTower == null)
+        {
+            Debug.LogError("업그레이드 시도: selectedTower가 null입니다!");
+            return;
+        }
+
+        // 업그레이드 전 옵션 정보 저장
+        var upgradeOptions = selectedTower.GetAvailableUpgradeOptions();
+        if (upgradeOptions == null || upgradeIndex < 0 || upgradeIndex >= upgradeOptions.Length)
+        {
+            Debug.LogError($"업그레이드 시도 실패: 유효하지 않은 옵션 인덱스 {upgradeIndex}");
+            return;
+        }
+
+        var upgradeOption = upgradeOptions[upgradeIndex];
+        string towerNameBeforeUpgrade = selectedTower.name;
+        Debug.Log($"타워 업그레이드 시작: {towerNameBeforeUpgrade} -> {upgradeOption?.towerName ?? "Unknown"}");
+
+        // 골드 차감은 GameManager에서 이미 처리됨
+
+        // 타워 업그레이드
+        selectedTower.UpgradeTower(upgradeIndex);
+
+        // UI 업데이트
+        if (GameManager.Instance != null)
+        {
+            UpdateGoldDisplay(GameManager.Instance.CurrentGold);
+        }
+
+        // 업그레이드 성공 메시지 표시
+        if (WaveManager.Instance != null)
+        {
+            WaveManager.Instance.ShowWarningMessage($"{towerNameBeforeUpgrade} 업그레이드 성공! (-{upgradeCost}G)", 2f);
+        }
+
+        HideMainUI();
+
+        Debug.Log($"타워 업그레이드 완료: {towerNameBeforeUpgrade} -> {upgradeOption?.towerName ?? "Unknown"}");
+
+        // UI가 확실히 숨겨졌는지 추가 확인 (애니메이션 진행 중이 아닐 때만)
+        if (mainUI != null && mainUI.activeSelf && !isUIAnimating)
+        {
+            Debug.LogWarning("경고: UI가 여전히 활성화되어 있습니다. 강제로 숨깁니다.");
+            mainUI.SetActive(false);
+        }
+
+        // 약간의 지연 후 UI 상태 최종 확인
+        StartCoroutine(VerifyUIHidden());
+    }
+
+    /// <summary>
+    /// UI가 확실히 숨겨졌는지 확인하는 코루틴
+    /// </summary>
+    private IEnumerator VerifyUIHidden()
+    {
+        // Dotween 애니메이션이 완료될 때까지 대기
+        yield return new WaitForSeconds(0.3f);
+
+        if (mainUI != null && mainUI.activeSelf)
+        {
+            Debug.LogWarning("UI가 여전히 활성화되어 있어 강제로 숨깁니다.");
+            // 즉시 숨김 (애니메이션 없이)
+            CanvasGroup canvasGroup = mainUI.GetComponent<CanvasGroup>();
+            if (canvasGroup != null)
+            {
+                canvasGroup.alpha = 0f;
+            }
+            mainUI.transform.localScale = Vector3.one;
+            mainUI.SetActive(false);
+        }
+        else
+        {
+            Debug.Log("UI 숨김 검증 완료: 정상적으로 숨겨져 있습니다.");
+        }
+    }
 
     /// <summary>
     /// 타워 배치 시도
@@ -229,7 +811,6 @@ public class TowerPlacementSystem : MonoBehaviour
     {
         if (activeZone == null)
         {
-            Debug.Log("유효한 설치 위치가 없습니다!");
             return;
         }
 
@@ -240,49 +821,82 @@ public class TowerPlacementSystem : MonoBehaviour
             return;
         }
 
-        // 골드 확인
-        if (currentGold < towerCosts[towerIndex])
+        // TowerData에서 가격 가져오기
+        var towerData = towerPrefabs[towerIndex].GetComponent<BaseTower>()?.towerData;
+        int towerCost = towerData?.cost ?? 100; // fallback
+
+        // 골드 확인 (GameManager 사용)
+        if (GameManager.Instance != null && !GameManager.Instance.SpendGold(towerCost))
         {
-            Debug.Log($"골드가 부족합니다! 필요: {towerCosts[towerIndex]}, 현재: {currentGold}");
+            return;
+        }
+
+        // Zone 점유 상태 확인
+        if (activeZone.IsOccupied())
+        {
+            Debug.LogWarning("이 위치에는 이미 타워가 설치되어 있습니다!");
             return;
         }
 
         // 타워 생성
-        PlaceTower(towerIndex);
+        PlaceTower(towerIndex, towerCost);
     }
 
     /// <summary>
     /// 실제 타워 생성
     /// </summary>
-    private void PlaceTower(int towerIndex)
+    private void PlaceTower(int towerIndex, int towerCost)
     {
-        // 골드 차감
-        currentGold -= towerCosts[towerIndex];
+        // 골드 차감은 GameManager에서 이미 처리됨
 
         // 타워 생성 (TowerPlacementZone을 부모로 설정)
         Vector3 spawnPosition = activeZone.GetTowerPosition();
+
         GameObject newTower = Instantiate(towerPrefabs[towerIndex], spawnPosition, Quaternion.identity, activeZone.transform);
 
-        // 타워 이름 설정
-        newTower.name = $"{towerNames[towerIndex]} (생성됨)";
+        // 타워 이름 설정 (TowerData에서 가져오기)
+        var towerData = towerPrefabs[towerIndex].GetComponent<BaseTower>()?.towerData;
+        string towerName = towerData?.towerName ?? $"Tower {towerIndex}";
+        newTower.name = $"{towerName} (생성됨)";
 
         // 설치 위치 점유 표시
         activeZone.SetOccupied(true);
 
         // UI 업데이트
-        UpdateGoldDisplay();
+        if (GameManager.Instance != null)
+        {
+            UpdateGoldDisplay(GameManager.Instance.CurrentGold);
+        }
 
-        Debug.Log($"{towerNames[towerIndex]} 생성 완료! 비용: {towerCosts[towerIndex]}G, 남은 골드: {currentGold}");
+        // 타워 생성 성공 메시지 표시
+        if (WaveManager.Instance != null)
+        {
+            WaveManager.Instance.ShowWarningMessage($"{towerName} 생성 성공!", 2f);
+        }
+
+        // UI 닫기 (타워 생성 후)
+        HideMainUI();
+
+        // UI가 확실히 숨겨졌는지 추가 확인
+        if (mainUI != null && mainUI.activeSelf)
+        {
+            Debug.LogWarning("경고: 타워 생성 후 UI가 여전히 활성화되어 있습니다. 강제로 숨깁니다.");
+            mainUI.SetActive(false);
+        }
+
+        // 약간의 지연 후 UI 상태 최종 확인
+        StartCoroutine(VerifyUIHidden());
     }
 
     /// <summary>
     /// 골드 표시 업데이트
     /// </summary>
-    private void UpdateGoldDisplay()
+    private void UpdateGoldDisplay(int newGoldAmount)
     {
         if (goldText != null)
         {
-            goldText.text = $"Gold: {currentGold}";
+            goldText.text = $"Gold: {newGoldAmount}";
+            Debug.Log($"UI 골드 표시 업데이트: {newGoldAmount}G");
         }
     }
 
@@ -291,9 +905,11 @@ public class TowerPlacementSystem : MonoBehaviour
     /// </summary>
     public void AddGold(int amount)
     {
-        currentGold += amount;
-        UpdateGoldDisplay();
-        Debug.Log($"골드 획득: +{amount}, 총 골드: {currentGold}");
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.AddGold(amount);
+            UpdateGoldDisplay(GameManager.Instance.CurrentGold);
+        }
     }
 
     /// <summary>
@@ -301,11 +917,17 @@ public class TowerPlacementSystem : MonoBehaviour
     /// </summary>
     public int GetCurrentGold()
     {
-        return currentGold;
+        return GameManager.Instance != null ? GameManager.Instance.CurrentGold : 0;
     }
 
     private void OnDestroy()
     {
+        // 이벤트 구독 해제
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.OnGoldChanged -= UpdateGoldDisplay;
+        }
+
         // 싱글톤 정리
         if (Instance == this)
         {
@@ -313,3 +935,4 @@ public class TowerPlacementSystem : MonoBehaviour
         }
     }
 }
+

@@ -26,11 +26,21 @@ public class InputSO : ScriptableObject, InputSystem_Actions.IPlayerActions
 
     public Vector2 GetMoveDir()
     {
+        // UI가 활성화되면 이동 입력을 무시
+        if (TowerPlacementSystem.Instance != null && TowerPlacementSystem.Instance.IsUIActive)
+        {
+            return Vector2.zero;
+        }
         return input.Player.Move.ReadValue<Vector2>();
     }
 
     public Vector2 GetLookDir()
     {
+        // UI가 활성화되면 마우스 입력을 무시
+        if (TowerPlacementSystem.Instance != null && TowerPlacementSystem.Instance.IsUIActive)
+        {
+            return Vector2.zero;
+        }
         return input.Player.Look.ReadValue<Vector2>();
     }
 

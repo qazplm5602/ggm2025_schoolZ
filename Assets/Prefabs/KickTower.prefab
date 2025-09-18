@@ -45,15 +45,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f1d43e86642daba43b401b4583c6306e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  towerData: {fileID: 11400000, guid: ade933c88fa71e841babaf2459df653e, type: 2}
+  towerData: {fileID: 11400000, guid: 9c0d58615876eb046ae87712b815cf89, type: 2}
   enemyLayer:
     serializedVersion: 2
     m_Bits: 128
-  muzzleFlash: {fileID: 0}
-  upgradeEffect: {fileID: 0}
-  slashEffect: {fileID: 0}
-  towerAnimator: {fileID: 0}
-  attackAnimationName: Attack
+  towerAnimator: {fileID: 671505473113162293}
+  attackAnimationName: atk
 --- !u!1001 &804477100930834006
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -224,5 +221,10 @@ PrefabInstance:
 --- !u!4 &671505473105751509 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1694388104871467657, guid: 678bf8bc91771fa498236de892b83d1d, type: 3}
+  m_PrefabInstance: {fileID: 2220845995316492124}
+  m_PrefabAsset: {fileID: 0}
+--- !u!95 &671505473113162293 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 1694388104864216425, guid: 678bf8bc91771fa498236de892b83d1d, type: 3}
   m_PrefabInstance: {fileID: 2220845995316492124}
   m_PrefabAsset: {fileID: 0}

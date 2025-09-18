@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d20e666fd9fa2e469d8cf385e12ceb2, type: 3}
+  m_Name: ShootRocketTowerData
+  m_EditorClassIdentifier: 
+  towerName: "\uB85C\uCF13 \uC3D8\uAE30 \uD0C0\uC6CC"
+  description: "\uB85C\uCF13\uC744 \uC3E9\uB2C8\uB2E4.\n\uB124 \uC800\uB3C4 \uBB34\uC12D\uB124\uC694."
+  towerType: 0
+  towerIcon: {fileID: 21300000, guid: d7bb0a8649d5d8447888e33510398e5e, type: 3}
+  cost: 1500
+  attackRange: 10
+  attackDamage: 200
+  attackCooltime: 5
+  useStunEffect: 1
+  stunDuration: 0.5
+  useSlowEffect: 1
+  slowDuration: 2
+  slowSpeedMultiplier: 0.2
+  useAreaAttack: 1
+  areaAttackRadius: 5
+  canUpgrade: 0
+  upgradedVersion1: {fileID: 0}
+  upgradedVersion2: {fileID: 0}
+  upgradedVersion: {fileID: 0}

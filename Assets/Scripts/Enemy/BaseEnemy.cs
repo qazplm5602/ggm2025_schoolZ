@@ -4,9 +4,33 @@ using UnityEngine.AI;
 public abstract class BaseEnemy : Agent, IEnemy
 {
     [Header("Enemy Base Stats")]
-    [SerializeField] protected float maxHealth = 100f;
+    [SerializeField] protected float maxHealth = 150f;
     [SerializeField] protected float moveSpeed = 3f;
-    [SerializeField] protected int goldReward = 10;
+    [SerializeField] protected int goldReward = 20;
+
+    [Header("Special Effects")]
+    [SerializeField] protected float stunDuration = 0f; // 스턴 지속 시간
+
+    // 슬로우 효과 관리 (여러 개 중첩 가능)
+    protected System.Collections.Generic.List<SlowEffect> activeSlowEffects = new System.Collections.Generic.List<SlowEffect>();
+
+    [System.Serializable]
+    public class SlowEffect
+    {
+        public float duration;
+        public float multiplier;
+        public float startTime;
+
+        public SlowEffect(float duration, float multiplier)
+        {
+            this.duration = duration;
+            this.multiplier = multiplier;
+            this.startTime = Time.time;
+        }
+
+        public bool IsExpired => Time.time - startTime >= duration;
+        public float RemainingTime => Mathf.Max(0, duration - (Time.time - startTime));
+    }
     
     [Header("Visual")]
     [SerializeField] protected GameObject healthBarPrefab;
@@ -19,8 +43,203 @@ public abstract class BaseEnemy : Agent, IEnemy
     // Enemy 기본 프로퍼티들
     public virtual float MaxHealth => maxHealth;
     public float CurrentHealth { get; protected set; }
-    public virtual float MoveSpeed => moveSpeed;
+    public virtual float MoveSpeed => moveSpeed * GetStrongestSlowMultiplier(); // 슬로우 효과 적용
     public bool IsAlive { get; protected set; }
+    public bool IsStunned => stunDuration > 0f;
+    public bool IsSlowed => activeSlowEffects.Count > 0;
+
+    /// <summary>
+    /// 웨이브 효과 적용을 위한 체력 배율 설정
+    /// </summary>
+    public void ApplyHealthMultiplier(float multiplier)
+    {
+        if (multiplier <= 0) return;
+
+        maxHealth = Mathf.RoundToInt(maxHealth * multiplier);
+        CurrentHealth = maxHealth;
+
+    }
+
+    /// <summary>
+    /// 웨이브 효과 적용을 위한 속도 배율 설정
+    /// </summary>
+    public void ApplySpeedMultiplier(float multiplier)
+    {
+        if (multiplier <= 0) return;
+
+        moveSpeed *= multiplier;
+
+        // AgentMovement에도 적용
+        if (agentMovement != null)
+        {
+            agentMovement.moveSpeed = moveSpeed;
+            // NavMeshAgent의 속도도 업데이트
+            agentMovement.UpdateNavMeshSpeed();
+        }
+
+    }
+
+    /// <summary>
+    /// 스턴 효과 적용 (시간 초기화 방식)
+    /// </summary>
+    public void ApplyStun(float duration)
+    {
+        if (duration <= 0f) return;
+
+        // 새로운 스턴 시간 적용 (항상 더 긴 시간 선택)
+        float newDuration = Mathf.Max(duration, stunDuration);
+        bool wasStunnedBefore = IsStunned;
+
+        stunDuration = newDuration;
+
+        // 스턴이 처음 적용되는 경우 이동 중지
+        if (!wasStunnedBefore && IsStunned)
+        {
+            if (agentMovement != null && agentMovement.IsUsingNavMesh)
+            {
+                agentMovement.StopMovement();
+                Debug.Log($"{gameObject.name}: 스턴 적용으로 이동 중지 ({stunDuration:F1}초)");
+            }
+            else
+            {
+                Debug.Log($"{gameObject.name}: 스턴 적용됨 ({stunDuration:F1}초) - NavMesh 미사용");
+            }
+        }
+        else
+        {
+            Debug.Log($"{gameObject.name}: 스턴 연장 ({stunDuration:F1}초)");
+        }
+    }
+
+    /// <summary>
+    /// 슬로우 효과 적용 (강도별 중첩 방식)
+    /// </summary>
+    public void ApplySlow(float duration, float multiplier)
+    {
+        if (duration <= 0f) return;
+
+        multiplier = Mathf.Max(0.1f, multiplier); // 최소 10% 속도 보장
+
+        // 같은 강도의 슬로우 효과가 이미 있는지 확인
+        SlowEffect existingEffect = activeSlowEffects.Find(effect => Mathf.Approximately(effect.multiplier, multiplier));
+
+        if (existingEffect != null)
+        {
+            // 같은 강도의 효과가 있으면 duration만 비교해서 더 긴 것으로 업데이트
+            if (duration > existingEffect.RemainingTime)
+            {
+                float oldTime = existingEffect.RemainingTime;
+                existingEffect.duration = duration;
+                existingEffect.startTime = Time.time; // 시간 초기화
+                Debug.Log($"{gameObject.name}: 슬로우 연장 ({multiplier:P0}) - {oldTime:F1}초 → {duration:F1}초");
+            }
+            else
+            {
+                Debug.Log($"{gameObject.name}: 슬로우 유지 ({multiplier:P0}) - 남은시간: {existingEffect.RemainingTime:F1}초 (새로운 {duration:F1}초 무시)");
+            }
+        }
+        else
+        {
+            // 다른 강도의 효과면 새로 추가
+            SlowEffect newEffect = new SlowEffect(duration, multiplier);
+            activeSlowEffects.Add(newEffect);
+            Debug.Log($"{gameObject.name}: 슬로우 추가 ({multiplier:P0}, {duration:F1}초) - 총 효과: {activeSlowEffects.Count}개");
+        }
+
+        // 속도 즉시 업데이트
+        UpdateMovementSpeed();
+    }
+
+    /// <summary>
+    /// 가장 강한 슬로우 효과의 배율을 반환
+    /// </summary>
+    protected float GetStrongestSlowMultiplier()
+    {
+        if (activeSlowEffects.Count == 0) return 1f;
+
+        // 유효한 효과들만 필터링
+        var validEffects = activeSlowEffects.FindAll(effect => !effect.IsExpired);
+
+        if (validEffects.Count == 0) return 1f;
+
+        // 가장 강한 슬로우 효과 찾기 (가장 작은 multiplier = 가장 강한 슬로우)
+        SlowEffect strongestEffect = validEffects[0];
+        foreach (var effect in validEffects)
+        {
+            if (effect.multiplier < strongestEffect.multiplier)
+            {
+                strongestEffect = effect;
+            }
+        }
+
+        // 디버그: 적용되는 슬로우 효과 정보
+        if (validEffects.Count > 1)
+        {
+            Debug.Log($"{gameObject.name}: 다중 슬로우 적용 - 가장 강한 효과: {strongestEffect.multiplier:P0} ({strongestEffect.RemainingTime:F1}초 남음), 총 효과: {validEffects.Count}개");
+        }
+
+        return strongestEffect.multiplier;
+    }
+
+    /// <summary>
+    /// 이동 속도 업데이트
+    /// </summary>
+    protected void UpdateMovementSpeed()
+    {
+        if (agentMovement != null)
+        {
+            agentMovement.moveSpeed = MoveSpeed;
+            agentMovement.UpdateNavMeshSpeed();
+        }
+    }
+
+    /// <summary>
+    /// 스턴/슬로우 효과 타이머 업데이트
+    /// </summary>
+    protected void UpdateSpecialEffects()
+    {
+        // 스턴 타이머 감소
+        if (stunDuration > 0f)
+        {
+            stunDuration -= Time.deltaTime;
+            if (stunDuration <= 0f)
+            {
+                stunDuration = 0f;
+                // 스턴 해제 시 이동 재개
+                if (agentMovement != null && agentMovement.IsUsingNavMesh)
+                {
+                    agentMovement.ResumeMovement();
+                    Debug.Log($"{gameObject.name}: 스턴 해제 - 이동 재개");
+                }
+                else if (agentMovement != null)
+                {
+                    Debug.Log($"{gameObject.name}: 스턴 해제 - NavMesh 미사용");
+                }
+                Debug.Log($"{gameObject.name}: 스턴 해제");
+            }
+        }
+
+        // 만료된 슬로우 효과들 정리
+        int beforeCount = activeSlowEffects.Count;
+        activeSlowEffects.RemoveAll(effect => effect.IsExpired);
+
+        if (activeSlowEffects.Count != beforeCount)
+        {
+            Debug.Log($"{gameObject.name}: 슬로우 효과 정리 - {beforeCount}개 → {activeSlowEffects.Count}개");
+
+            // 슬로우 효과가 모두 사라졌으면 속도 복구
+            if (activeSlowEffects.Count == 0)
+            {
+                UpdateMovementSpeed();
+                Debug.Log($"{gameObject.name}: 모든 슬로우 효과 해제");
+            }
+            else
+            {
+                // 남은 효과 중 가장 강한 것으로 속도 업데이트
+                UpdateMovementSpeed();
+            }
+        }
+    }
 
     protected Transform healthBarTransform;
     protected AgentMovement agentMovement;
@@ -36,13 +255,29 @@ public abstract class BaseEnemy : Agent, IEnemy
     {
         if (IsAlive)
         {
-            // 플레이어 추적 (활성화된 경우)
-            if (enablePlayerTracking && playerTransform != null)
+            // 스턴/슬로우 타이머 업데이트
+            UpdateSpecialEffects();
+
+            // 스턴 상태가 아니면 이동
+            if (!IsStunned)
             {
-                TrackPlayer();
+                // 플레이어 추적 (활성화된 경우)
+                if (enablePlayerTracking && playerTransform != null)
+                {
+                    TrackPlayer();
+                }
+
+                Move();
+            }
+            else
+            {
+                // 스턴 상태일 때는 이동 정지
+                if (agentMovement != null)
+                {
+                    agentMovement.StopMovement();
+                }
             }
 
-            Move();
             UpdateHealthBar();
         }
     }
@@ -51,6 +286,13 @@ public abstract class BaseEnemy : Agent, IEnemy
     {
         CurrentHealth = MaxHealth;
         IsAlive = true;
+
+        // 슬로우 효과 리스트 초기화
+        if (activeSlowEffects == null)
+        {
+            activeSlowEffects = new System.Collections.Generic.List<SlowEffect>();
+        }
+        activeSlowEffects.Clear();
 
         // AgentMovement 컴포넌트 가져오기
         agentMovement = GetComponent<AgentMovement>();
@@ -105,7 +347,6 @@ public abstract class BaseEnemy : Agent, IEnemy
         CurrentHealth -= damage;
         CurrentHealth = Mathf.Max(0, CurrentHealth);
 
-        Debug.Log($"{gameObject.name}이 {damage} 데미지를 받았습니다. 남은 체력: {CurrentHealth}");
 
         // 체력바 업데이트
         UpdateHealthBar();
@@ -125,17 +366,13 @@ public abstract class BaseEnemy : Agent, IEnemy
         
         IsAlive = false;
         
-        Debug.Log($"{gameObject.name}이 죽었습니다!");
         
         // 죽음 이펙트 재생
         if (deathEffect != null)
         {
             Instantiate(deathEffect, transform.position, transform.rotation);
         }
-        
-        // 보상 지급 (옵션)
-        // GameManager.Instance.AddGold(goldReward);
-        
+
         // 죽을 때 추가 효과
         OnDie();
         
@@ -144,7 +381,6 @@ public abstract class BaseEnemy : Agent, IEnemy
     
     protected virtual void OnReachedDestination()
     {
-        Debug.Log($"{gameObject.name}이 끝점에 도달했습니다!");
 
         // 플레이어 체력 감소 등 처리 (옵션)
         // GameManager.Instance.TakeDamage(1);
@@ -189,6 +425,23 @@ public abstract class BaseEnemy : Agent, IEnemy
     protected virtual void OnDie()
     {
         // 죽을 때 추가 효과 (예: 폭발, 아이템 드롭 등)
+
+        // 웨이브 매니저에 죽음 알림 (골드 지급 처리)
+        if (WaveManager.Instance != null)
+        {
+            WaveManager.Instance.OnEnemyDeath(gameObject);
+        }
+        else
+        {
+            // WaveManager가 없으면 직접 골드 지급 (fallback)
+            if (GameManager.Instance != null)
+            {
+                int goldBefore = GameManager.Instance.CurrentGold;
+                GameManager.Instance.AddGold(goldReward);
+                int goldAfter = GameManager.Instance.CurrentGold;
+                Debug.Log($"적 사망 골드 지급 (fallback): {gameObject.name} → +{goldReward}G (이전: {goldBefore}G → 현재: {goldAfter}G)");
+            }
+        }
     }
 
     // 플레이어 찾기 메소드
@@ -198,7 +451,6 @@ public abstract class BaseEnemy : Agent, IEnemy
         if (player != null)
         {
             playerTransform = player.transform;
-            Debug.Log($"{gameObject.name}이 플레이어를 찾았습니다: {player.name}");
         }
         else
         {

@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d20e666fd9fa2e469d8cf385e12ceb2, type: 3}
+  m_Name: ShootTowerData
+  m_EditorClassIdentifier: 
+  towerName: "\uCD1D\uC3D8\uAE30 \uD0C0\uC6CC"
+  description: "\uD30C\uB791\uC5EC\uC790\uC911\uACE0\uB4F1\uD559\uAD50\uC758 \uAD50\uB828\uC218\uC5C5\uC5D0\uC11C
+    \uBC30\uC6B4 \uC9C0\uC2DD\uC744 \uD65C\uC6A9\uD558\uB294 \uAD70\uD544\uC5EC\uACE0\uC0DD"
+  towerType: 0
+  towerIcon: {fileID: 21300000, guid: d7bb0a8649d5d8447888e33510398e5e, type: 3}
+  cost: 500
+  attackRange: 7
+  attackDamage: 5
+  attackCooltime: 0.5
+  useStunEffect: 0
+  stunDuration: 2
+  useSlowEffect: 0
+  slowDuration: 3
+  slowSpeedMultiplier: 0.5
+  useAreaAttack: 1
+  areaAttackRadius: 1
+  canUpgrade: 1
+  upgradedVersion1: {fileID: 11400000, guid: 7b5c99509b4cb3944acea4875a0ec07c, type: 2}
+  upgradedVersion2: {fileID: 11400000, guid: 58a64e6391a01644dbccdea839b09dfe, type: 2}
+  upgradedVersion: {fileID: 0}

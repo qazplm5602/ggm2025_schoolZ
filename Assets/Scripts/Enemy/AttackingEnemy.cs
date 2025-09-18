@@ -5,7 +5,6 @@ public class AttackingEnemy : BaseEnemy
 {
     [Header("Attack Settings")]
     [SerializeField] private float attackRange = 2f;
-    [SerializeField] private float attackDamage = 15f;
     [SerializeField] private float attackSpeed = 1f; // 초당 공격 횟수
     [SerializeField] private LayerMask towerLayer = -1;
     
@@ -142,14 +141,19 @@ public class AttackingEnemy : BaseEnemy
             Instantiate(attackEffect, effectPos, Quaternion.identity);
         }
         
-        // 타워에게 데미지 적용 (타워가 체력을 가진다면)
-        // ITower tower = currentTarget.GetComponent<ITower>();
-        // if (tower != null)
-        // {
-        //     // 타워 데미지 시스템이 있다면 여기서 처리
-        // }
+        // 타워에게 데미지 적용 (TowerPlacementZone을 통해 처리)
+        TowerPlacementZone zone = currentTarget.GetComponentInParent<TowerPlacementZone>();
+        if (zone != null)
+        {
+            // 존에 타워가 있다면 데미지 적용
+            BaseTower tower = zone.GetPlacedTower();
+            if (tower != null)
+            {
+                // 타워 데미지 시스템 구현 예정
+                // tower.TakeDamage(damage);
+            }
+        }
         
-        Debug.Log($"{gameObject.name}이 {currentTarget.name}을 공격했습니다! 데미지: {attackDamage}");
     }
     
     protected override void OnTakeDamage(float damage)

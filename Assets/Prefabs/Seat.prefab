@@ -216,7 +216,7 @@ NavMeshObstacle:
   m_Enabled: 1
   serializedVersion: 3
   m_Shape: 1
-  m_Extents: {x: 0.0005, y: 0.0005, z: 0.0005}
+  m_Extents: {x: 0.0006, y: 0.0006, z: 0.0006}
   m_MoveThreshold: 0.1
   m_Carve: 1
   m_CarveOnlyStationary: 1
@@ -268,5 +268,5 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   activationRange: 1.5
-  towerOffset: {x: 0, y: 1.33, z: 0}
+  towerOffset: {x: 0, y: 1, z: 0}
   isOccupied: 0

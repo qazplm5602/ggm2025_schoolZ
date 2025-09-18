@@ -93,7 +93,6 @@ public class HealthBarCreator : MonoBehaviour
         // 임시 오브젝트 삭제
         DestroyImmediate(healthBarRoot);
 
-        Debug.Log("HealthBar 프리팹이 생성되었습니다: " + prefabPath);
         AssetDatabase.Refresh();
     }
 
@@ -142,7 +141,6 @@ public class HealthBarCreator : MonoBehaviour
         // 임시 오브젝트 삭제
         DestroyImmediate(healthBarRoot);
 
-        Debug.Log("SimpleHealthBar 프리팹이 생성되었습니다: " + prefabPath);
         AssetDatabase.Refresh();
     }
 }

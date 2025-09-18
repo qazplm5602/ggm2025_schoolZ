@@ -56,7 +56,7 @@ public class AgentMovement : MonoBehaviour, IAgentComponent
 
     public void StopMovement()
     {
-        if (useNavMesh && navMeshAgent != null)
+        if (useNavMesh && navMeshAgent != null && navMeshAgent.isOnNavMesh)
         {
             navMeshAgent.isStopped = true;
         }
@@ -65,7 +65,7 @@ public class AgentMovement : MonoBehaviour, IAgentComponent
 
     public void ResumeMovement()
     {
-        if (useNavMesh && navMeshAgent != null)
+        if (useNavMesh && navMeshAgent != null && navMeshAgent.isOnNavMesh)
         {
             navMeshAgent.isStopped = false;
         }
@@ -122,10 +122,20 @@ public class AgentMovement : MonoBehaviour, IAgentComponent
     // 현재 이동 모드 확인
     public bool IsUsingNavMesh => useNavMesh && navMeshAgent != null;
 
+    /// <summary>
+    /// NavMeshAgent의 속도를 현재 moveSpeed로 업데이트
+    /// </summary>
+    public void UpdateNavMeshSpeed()
+    {
+        if (navMeshAgent != null)
+        {
+            navMeshAgent.speed = moveSpeed;
+        }
+    }
+
     // 오버라이드 가능한 콜백 메소드들
     protected virtual void OnReachedDestination()
     {
-        Debug.Log($"{gameObject.name}이 목적지에 도달했습니다!");
     }
 
 }

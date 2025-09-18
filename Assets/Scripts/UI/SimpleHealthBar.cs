@@ -101,13 +101,11 @@ public class SimpleHealthBar : MonoBehaviour
     {
         maxHealth = maxHp;
         currentHealth = currentHp;
-        // LateUpdate에서 처리하므로 별도 호출 불필요
     }
 
     public void UpdateHealth(float newCurrentHp)
     {
         currentHealth = Mathf.Clamp(newCurrentHp, 0, maxHealth);
-        // LateUpdate에서 처리하므로 여기서는 값만 업데이트
     }
 
     private void LateUpdate()

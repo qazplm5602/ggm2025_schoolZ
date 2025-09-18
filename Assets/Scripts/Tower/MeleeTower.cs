@@ -3,71 +3,34 @@ using System.Collections.Generic;
 
 public class MeleeTower : BaseTower
 {
-    [Header("Melee Tower Settings")]
-    [SerializeField] private GameObject slashEffect;
+    // Melee Tower - 범위 공격 특화
     
-    [Header("Animation")]
-    [SerializeField] private Animator towerAnimator;
-    [SerializeField] private string attackAnimationName;
-    
-    private List<Transform> currentTargets = new List<Transform>();
-    
-    protected override void ApplyTowerData()
-    {
-        // maxTargets 설정 제거 - 제한 없이 모든 적 공격
-        // TowerData의 다른 설정들은 BaseTower에서 처리됨
 
-        // 애니메이터 자동 찾기 (자식 객체 포함)
-        if (towerAnimator == null)
-            towerAnimator = GetComponentInChildren<Animator>();
-    }
-    
+
     protected override void FindTarget()
     {
-        // 근접 타워는 범위 내 모든 적을 동시에 공격할 수 있음
-        currentTargets.Clear();
-
+        // 근접 타워는 타겟을 찾기만 하면 범위 공격을 수행
         Collider[] enemiesInRange = Physics.OverlapSphere(transform.position, AttackRange, enemyLayer);
+
+        Transform nearestEnemy = null;
+        float nearestDistance = Mathf.Infinity;
 
         foreach (Collider enemy in enemiesInRange)
         {
             if (enemy.GetComponent<IEnemy>() != null)
             {
-                currentTargets.Add(enemy.transform);
-            }
-        }
-
-        // 주 타겟 설정 (가장 가까운 적)
-        if (currentTargets.Count > 0)
-        {
-            currentTarget = GetNearestTarget();
-        }
-        else
-        {
-            currentTarget = null;
-        }
-    }
-    
-    private Transform GetNearestTarget()
-    {
-        Transform nearest = null;
-        float nearestDistance = Mathf.Infinity;
-        
-        foreach (Transform target in currentTargets)
-        {
-            if (target != null)
-            {
-                float distance = Vector3.Distance(transform.position, target.position);
+                float distance = Vector3.Distance(transform.position, enemy.transform.position);
                 if (distance < nearestDistance)
                 {
                     nearestDistance = distance;
-                    nearest = target;
+                    nearestEnemy = enemy.transform;
                 }
             }
         }
-        
-        return nearest;
+
+        currentTarget = nearestEnemy;
     }
+    
     
     protected override bool IsTargetInRange(Transform target)
     {
@@ -76,64 +39,47 @@ public class MeleeTower : BaseTower
         return distance <= AttackRange;
     }
     
-    protected override void PerformAttack()
+    protected override void PerformAttackLogic()
     {
-        if (currentTargets.Count == 0) return;
+        if (currentTarget == null) return;
 
-        // 애니메이션 재생
-        if (towerAnimator != null && !string.IsNullOrEmpty(attackAnimationName))
-        {
-            towerAnimator.SetTrigger(attackAnimationName);
-        }
-
-        // 공격 이펙트 재생
-        PlayAttackEffects();
-
-        // 0.1초 딜레이 후 데미지 적용
-        StartCoroutine(ApplyDamageWithDelay(0.1f));
+        // 타겟을 중심으로 범위 공격 수행
+        PerformAreaAttack();
     }
 
-    private System.Collections.IEnumerator ApplyDamageWithDelay(float delay)
+    /// <summary>
+    /// 타겟을 중심으로 범위 공격 수행
+    /// </summary>
+    private void PerformAreaAttack()
     {
-        yield return new WaitForSeconds(delay);
+        if (currentTarget == null) return;
 
-        // 범위 내 모든 적에게 데미지 적용
-        AttackAllTargetsInRange();
-
-        Debug.Log($"근접 타워가 {currentTargets.Count}명의 적을 공격했습니다!");
-    }
-    
-    private void AttackAllTargetsInRange()
-    {
-        // 현재 범위 내의 모든 적을 공격 (제한 없음)
+        // 타워의 공격 범위 내에서 적을 찾아 공격 (attackRange와 meleeAreaRadius 통합)
         Collider[] enemiesInRange = Physics.OverlapSphere(transform.position, AttackRange, enemyLayer);
 
-        int attackedCount = 0;
-        foreach (Collider enemyCollider in enemiesInRange)
+        int hitCount = 0;
+        foreach (Collider collider in enemiesInRange)
         {
-            IEnemy enemy = enemyCollider.GetComponent<IEnemy>();
+            IEnemy enemy = collider.GetComponent<IEnemy>();
             if (enemy != null)
             {
                 enemy.TakeDamage(AttackDamage);
-                attackedCount++;
-
-                // 개별 타격 이펙트 (옵션)
-                if (slashEffect != null)
-                {
-                    Vector3 effectPos = enemyCollider.transform.position + Vector3.up * 0.5f;
-                    Instantiate(slashEffect, effectPos, Quaternion.identity);
-                }
+                hitCount++;
             }
         }
 
-        Debug.Log($"근접 타워가 {attackedCount}명의 적을 공격했습니다!");
     }
-    
-    private void PlayAttackEffects()
+
+
+    /// <summary>
+    /// 근접 타워 전용 공격 이펙트 재생 (BaseTower의 PlayAttackEffects 오버라이드)
+    /// </summary>
+    protected override void PlayAttackEffects()
     {
-        // 머즐 플래시를 공격 이펙트로 사용
-        if (muzzleFlash != null)
-            muzzleFlash.Play();
+        // 기본 이펙트 재생 (머즐 플래시)
+        base.PlayAttackEffects();
+
+        // 근접 타워 특유의 이펙트는 PerformAreaAttack에서 개별적으로 처리
     }
     
     protected override void OnUpgraded()
@@ -142,23 +88,37 @@ public class MeleeTower : BaseTower
         // ApplyTowerData()가 자동으로 호출되므로 별도 처리 불필요
     }
     
-    protected override void OnDrawGizmosSelected()
+    /// <summary>
+    /// 근접 타워 특화 시각화
+    /// </summary>
+    protected override void DrawTowerSpecificGizmos()
     {
-        // 근접 공격 범위 시각화
-        Gizmos.color = Color.blue;
+        // 근접 타워의 고유 시각화
+        DrawMeleeVisualization();
+    }
+
+    /// <summary>
+    /// 근접 타워 시각화 (타워 중심 범위 공격)
+    /// </summary>
+    private void DrawMeleeVisualization()
+    {
+        if (currentTarget == null) return;
+
+        // 타워 중심 범위 공격 반경 표시 (attackRange 사용)
+        Gizmos.color = new Color(1f, 0.5f, 0f, 0.4f); // 반투명 주황색
         Gizmos.DrawWireSphere(transform.position, AttackRange);
 
-        // 현재 타겟들 표시
-        Gizmos.color = Color.yellow;
-        foreach (Transform target in currentTargets)
-        {
-            if (target != null)
-            {
-                Gizmos.DrawLine(transform.position, target.position);
-            }
-        }
+        // 타워에서 타겟으로의 선
+        Gizmos.color = Color.red;
+        Gizmos.DrawLine(transform.position, currentTarget.position);
 
-        // 기본 범위도 표시
-        base.OnDrawGizmosSelected();
+        // 타겟 표시
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(currentTarget.position, 0.3f);
+
+        // 범위 정보 표시
+        Vector3 infoPos = transform.position + Vector3.up * (AttackRange + 0.5f);
+        DrawLabel(infoPos, $"근접 범위 공격\n반경: {AttackRange}m");
     }
+
 }

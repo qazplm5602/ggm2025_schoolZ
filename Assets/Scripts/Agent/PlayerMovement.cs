@@ -24,6 +24,12 @@ public class PlayerMovement : AgentMovement
     {
         if (controller == null) return;
 
+        // UI가 활성화되면 이동과 회전을 중지
+        if (TowerPlacementSystem.Instance != null && TowerPlacementSystem.Instance.IsUIActive)
+        {
+            return;
+        }
+
         // 예시: WASD 입력으로 이동 (InputSO에 맞게 수정 필요)
         Vector2 moveDir = input.GetMoveDir();
         Vector3 move = new Vector3(moveDir.x, 0, moveDir.y);

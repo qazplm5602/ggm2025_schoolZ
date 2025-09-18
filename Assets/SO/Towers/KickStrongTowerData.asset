@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d20e666fd9fa2e469d8cf385e12ceb2, type: 3}
+  m_Name: KickStrongTowerData
+  m_EditorClassIdentifier: 
+  towerName: "\uC388\uBC1C\uCC28\uAE30 \uD0C0\uC6CC"
+  description: "\uADFC\uCC98\uC5D0 \uC788\uB294 \uBAA8\uB4E0 \uC801\uB4E4\uC5D0\uAC8C
+    \uAC15\uD558\uAC8C \uB4A4\uB3CC\uB824\uCC28\uAE30\uB97C \uAC00\uD569\uB2C8\uB2E4.\n\uD0DC\uAD8C\uB3C4
+    \uAC80\uC740\uB760\uB77C\uACE0 \uD558\uB124\uC694."
+  towerType: 1
+  towerIcon: {fileID: 21300000, guid: e9202e1cee334394ab388b4b519e9eaf, type: 3}
+  cost: 500
+  attackRange: 2.5
+  attackDamage: 200
+  attackCooltime: 5
+  useStunEffect: 1
+  stunDuration: 0.5
+  useSlowEffect: 1
+  slowDuration: 3
+  slowSpeedMultiplier: 0.15
+  useAreaAttack: 0
+  areaAttackRadius: 2
+  canUpgrade: 1
+  upgradedVersion1: {fileID: 11400000, guid: 141deedae8f424543b629295556df4dd, type: 2}
+  upgradedVersion2: {fileID: 11400000, guid: f21c10ae34dbcc044a2105aff56caefa, type: 2}
+  upgradedVersion: {fileID: 0}
