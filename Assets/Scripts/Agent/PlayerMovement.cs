@@ -6,6 +6,7 @@ public class PlayerMovement : AgentMovement
     [SerializeField] private Transform camTrm;
     [SerializeField] private float camHeight;
     private CharacterController controller;
+    private Animator animator;
     public float speed = 5f;
     public float jumpPower = 5f;
     public float camRotSpeed = 15f;
@@ -17,6 +18,7 @@ public class PlayerMovement : AgentMovement
     {
         base.InitAgent(agent);
         controller = GetComponent<CharacterController>();
+        animator = GetComponentInChildren<Animator>();
         input.OnJumpChange += HandleChangeJump;
     }
 
@@ -33,17 +35,32 @@ public class PlayerMovement : AgentMovement
         // 예시: WASD 입력으로 이동 (InputSO에 맞게 수정 필요)
         Vector2 moveDir = input.GetMoveDir();
         Vector3 move = new Vector3(moveDir.x, 0, moveDir.y);
-        move = transform.TransformDirection(move);
+
+        // 카메라의 y축만 적용해서 이동 방향 변환
+        Quaternion camYRot = Quaternion.Euler(0, camTrm.eulerAngles.y, 0);
+        move = camYRot * move;
         move *= speed;
 
+        // if (move.sqrMagnitude > 0f)
+        // {
+        //     // 카메라의 y축을 기준으로 월드 forward 방향으로 회전
+        //     Vector3 worldForward = Quaternion.Euler(0, camTrm.eulerAngles.y, 0) * Vector3.forward;
+        //     Quaternion targetRot = Quaternion.LookRotation(worldForward, Vector3.up);
+        //     transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * camRotSpeed);
+        // }
         if (move.sqrMagnitude > 0f)
         {
-            // 카메라의 y축을 기준으로 월드 forward 방향으로 회전
-            Vector3 worldForward = Quaternion.Euler(0, camTrm.eulerAngles.y, 0) * Vector3.forward;
-            Quaternion targetRot = Quaternion.LookRotation(worldForward, Vector3.up);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * camRotSpeed);
+            // 카메라의 y축 기준으로 이동 방향을 변환하여, 그 방향을 바라보게 회전
+            Vector3 lookDir = new Vector3(moveDir.x, 0f, moveDir.y);
+            lookDir = Quaternion.Euler(0, camTrm.eulerAngles.y, 0) * lookDir;
+            if (lookDir.sqrMagnitude > 0.0001f)
+            {
+                Quaternion targetRot = Quaternion.LookRotation(lookDir, Vector3.up);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 10f);
+            }
         }
         camTrm.position = transform.position + Vector3.up * camHeight;
+        animator.SetFloat("MoveSpeed", Mathf.Lerp(animator.GetFloat("MoveSpeed"), move.sqrMagnitude > 0f ? 1 : 0, Time.deltaTime * 10));
 
         // 중력 적용
         if (controller.isGrounded)
