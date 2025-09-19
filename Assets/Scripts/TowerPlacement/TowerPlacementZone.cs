@@ -7,7 +7,6 @@ using UnityEngine;
 public class TowerPlacementZone : MonoBehaviour
 {
     [Header("설정")]
-    [SerializeField] private float activationRange = 3f; // UI 활성화 범위 (현재 미사용)
     [SerializeField] private Vector3 towerOffset = Vector3.up; // 타워 생성 위치 오프셋
 
     [Header("상태")]

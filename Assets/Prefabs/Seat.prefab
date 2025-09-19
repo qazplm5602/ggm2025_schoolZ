@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 6513355614030172795}
   - component: {fileID: 7140548417610806429}
   - component: {fileID: 7423882846604311500}
-  m_Layer: 6
+  m_Layer: 8
   m_Name: Desk
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -97,7 +97,7 @@ GameObject:
   - component: {fileID: 2465227901481732454}
   - component: {fileID: 8122037556253095529}
   - component: {fileID: 1405327876494764333}
-  m_Layer: 6
+  m_Layer: 8
   m_Name: Chair
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -182,7 +182,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2274726958456971785}
   - component: {fileID: 1033389979400937371}
-  m_Layer: 6
+  m_Layer: 8
   m_Name: Seat
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -216,7 +216,7 @@ NavMeshObstacle:
   m_Enabled: 1
   serializedVersion: 3
   m_Shape: 1
-  m_Extents: {x: 0.0006, y: 0.0006, z: 0.0006}
+  m_Extents: {x: 0.00175, y: 0.00175, z: 0.00175}
   m_MoveThreshold: 0.1
   m_Carve: 1
   m_CarveOnlyStationary: 1
@@ -232,7 +232,9 @@ GameObject:
   m_Component:
   - component: {fileID: 7707263283237583271}
   - component: {fileID: 623592668087637724}
-  m_Layer: 0
+  - component: {fileID: 8501970655953515121}
+  - component: {fileID: 1305088933052515410}
+  m_Layer: 8
   m_Name: Seat
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -267,6 +269,42 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17bd0dc4899712742bfed494ac3e57ea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  activationRange: 1.5
   towerOffset: {x: 0, y: 1, z: 0}
   isOccupied: 0
+--- !u!114 &8501970655953515121
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7630945287729654411}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0e60ae6fcbdc2a345888e1329f77c5e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  <PushSocket>k__BackingField: {fileID: 0}
+  isPlaced: 1
+  isBeingPushed: 0
+  tableRigidbody: {fileID: 0}
+--- !u!65 &1305088933052515410
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7630945287729654411}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.8, y: 0.8, z: 0.8}
+  m_Center: {x: 0, y: 0.65, z: 0}

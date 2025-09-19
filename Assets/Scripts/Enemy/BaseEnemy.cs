@@ -8,6 +8,10 @@ public abstract class BaseEnemy : Agent, IEnemy
     [SerializeField] protected float moveSpeed = 3f;
     [SerializeField] protected int goldReward = 20;
 
+    [Header("Speed Randomization")]
+    [SerializeField] protected float speedVariationMin = -0.5f; // 기본 속도 대비 최소 변동치
+    [SerializeField] protected float speedVariationMax = 0.5f;  // 기본 속도 대비 최대 변동치
+
     [Header("Special Effects")]
     [SerializeField] protected float stunDuration = 0f; // 스턴 지속 시간
 
@@ -268,6 +272,12 @@ public abstract class BaseEnemy : Agent, IEnemy
                 }
 
                 Move();
+
+                // NavMeshAgent 경로 상태 체크 (3초마다 - 보험용)
+                if (Time.frameCount % 180 == 0) // 대략 3초마다
+                {
+                    CheckNavMeshAgentPath();
+                }
             }
             else
             {
@@ -300,6 +310,13 @@ public abstract class BaseEnemy : Agent, IEnemy
         {
             agentMovement = gameObject.AddComponent<AgentMovement>();
         }
+
+        // 각 좀비마다 랜덤한 속도 적용 (기본 속도를 기준으로 ±범위 내 랜덤)
+        float baseSpeed = moveSpeed; // 원래 기본 속도 저장
+        float speedVariation = Random.Range(speedVariationMin, speedVariationMax);
+        moveSpeed = Mathf.Max(0.5f, baseSpeed + speedVariation); // 최소 속도는 0.5f로 제한
+
+        Debug.Log($"[{gameObject.name}] 속도 설정: 기본 {baseSpeed:F1} → 랜덤 적용 {moveSpeed:F1} (변동: {speedVariation:+0.0;-0.0})");
 
         // 이동 속도 동기화
         agentMovement.moveSpeed = MoveSpeed;
@@ -384,8 +401,6 @@ public abstract class BaseEnemy : Agent, IEnemy
 
         // 플레이어 체력 감소 등 처리 (옵션)
         // GameManager.Instance.TakeDamage(1);
-
-        Destroy(gameObject);
     }
     
     protected virtual void UpdateHealthBar()
@@ -465,5 +480,133 @@ public abstract class BaseEnemy : Agent, IEnemy
 
         // 플레이어 위치로 이동 설정
         agentMovement.SetDestination(playerTransform.position);
+
+        // NavMeshAgent가 있는 경우 경로 상태 체크
+        var navAgent = agentMovement.GetComponent<NavMeshAgent>();
+        if (navAgent != null)
+        {
+            // 경로 계산이 실패한 경우
+            if (navAgent.pathStatus == NavMeshPathStatus.PathInvalid)
+            {
+                Debug.Log($"[{gameObject.name}] NavMesh 경로 무효! 점프 이동 시작");
+                StartCoroutine(JumpToPlayer());
+                return;
+            }
+
+            // 목적지에 도달할 수 없는 경우 (PathPartial + 목적지 멀리 있음)
+            if (navAgent.pathStatus == NavMeshPathStatus.PathPartial &&
+                Vector3.Distance(navAgent.destination, playerTransform.position) > 2.0f)
+            {
+                Debug.Log($"[{gameObject.name}] 경로 불완전하고 목적지 멀리 있음! 점프 이동 시작");
+                StartCoroutine(JumpToPlayer());
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// NavMeshAgent의 경로 상태를 체크하여 대체 이동 처리
+    /// </summary>
+    protected virtual void CheckNavMeshAgentPath()
+    {
+        if (!IsAlive || playerTransform == null || agentMovement == null) return;
+
+        // NavMeshAgent 컴포넌트 가져오기
+        var navAgent = agentMovement.GetComponent<NavMeshAgent>();
+        if (navAgent == null) return;
+
+        // 경로 상태 체크
+        if (navAgent.pathStatus != NavMeshPathStatus.PathComplete &&
+            navAgent.pathStatus != NavMeshPathStatus.PathPartial)
+        {
+            Debug.Log($"[{gameObject.name}] NavMesh 경로 실패 ({navAgent.pathStatus})! 점프 이동 시작");
+            StartCoroutine(JumpToPlayer());
+            return;
+        }
+
+        // 경로가 있지만 목적지에 도달할 수 없는 경우 (PathPartial)
+        if (navAgent.pathStatus == NavMeshPathStatus.PathPartial &&
+            Vector3.Distance(navAgent.destination, playerTransform.position) > 1.0f)
+        {
+            Debug.Log($"[{gameObject.name}] NavMesh 경로 불완전! 점프 이동 시작");
+            StartCoroutine(JumpToPlayer());
+            return;
+        }
+
+        // 목적지가 변경되었는데 경로가 오래된 경우
+        if (navAgent.isPathStale)
+        {
+            Debug.Log($"[{gameObject.name}] 경로가 오래됨! 재계산 필요");
+            navAgent.SetDestination(playerTransform.position);
+        }
+    }
+
+    /// <summary>
+    /// 플레이어에게 점프 이동
+    /// </summary>
+    protected virtual System.Collections.IEnumerator JumpToPlayer()
+    {
+        if (!IsAlive || playerTransform == null) yield break;
+
+        // NavMesh 에이전트 비활성화
+        if (agentMovement != null && agentMovement.IsUsingNavMesh)
+        {
+            agentMovement.StopMovement();
+            var navAgent = GetComponent<NavMeshAgent>();
+            if (navAgent != null)
+            {
+                navAgent.enabled = false;
+            }
+        }
+
+        Debug.Log($"[{gameObject.name}] 플레이어에게 점프 이동 시작");
+
+        Vector3 startPosition = transform.position;
+        Vector3 targetPosition = playerTransform.position;
+
+        // 목표 Y값을 시작 Y값으로 설정 (포물선의 시작과 끝 높이 일치)
+        targetPosition.y = startPosition.y;
+
+        float jumpDuration = 1.5f; // 포물선 이동 시간
+        float elapsedTime = 0f;
+        float distance = Vector3.Distance(startPosition, targetPosition);
+        float jumpHeight = Mathf.Max(1.5f, distance * 0.3f); // 거리에 따른 점프 높이
+
+        while (elapsedTime < jumpDuration && IsAlive)
+        {
+            elapsedTime += Time.deltaTime;
+            float t = elapsedTime / jumpDuration;
+
+            // X, Z는 선형 보간
+            Vector3 currentPosition = Vector3.Lerp(startPosition, targetPosition, t);
+
+            // Y는 포물선 (시작과 끝 높이가 같음)
+            currentPosition.y = startPosition.y + Mathf.Sin(t * Mathf.PI) * jumpHeight;
+
+            transform.position = currentPosition;
+
+            yield return null;
+        }
+
+        // 최종 위치 설정
+        if (IsAlive)
+        {
+            transform.position = targetPosition;
+
+            // NavMesh 에이전트 재활성화
+            if (agentMovement != null)
+            {
+                var navAgent = GetComponent<NavMeshAgent>();
+                if (navAgent != null)
+                {
+                    navAgent.enabled = true;
+                    agentMovement.SetDestination(playerTransform.position);
+                    Debug.Log($"[{gameObject.name}] NavMesh 에이전트 재활성화 및 목적지 재설정");
+                }
+            }
+
+            // 도착 처리 (플레이어에게 데미지 등)
+            OnReachedDestination();
+        }
     }
 }

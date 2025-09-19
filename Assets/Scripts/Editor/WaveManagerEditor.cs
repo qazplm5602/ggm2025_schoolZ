@@ -98,32 +98,32 @@ public class WaveManagerEditor : Editor
         else if (waveIndex <= 6) // Wave 4-6: 보통
         {
             int relativeIndex = waveIndex - 4; // 0, 1, 2 (Wave 4, 5, 6)
-            waveData.enemyCount = Mathf.RoundToInt(15 * Mathf.Pow(1.3f, relativeIndex)); // 15, 20, 26 (약 1.3배씩 증가)
+            waveData.enemyCount = Mathf.RoundToInt(20 * Mathf.Pow(1.2f, relativeIndex)); // 15, 20, 26 (약 1.3배씩 증가)
             waveData.spawnInterval = Mathf.Max(0.4f, 0.85f - relativeIndex * 0.15f); // 0.85, 0.7, 0.55
             // maxEnemiesAtOnce 제거됨 - 제한 없음
-            waveData.speedMultiplier = 1.15f + relativeIndex * 0.12f; // 1.15, 1.27, 1.39 (약 12%씩 증가)
-            waveData.healthMultiplier = 2.25f * Mathf.Pow(1.5f, relativeIndex); // 2.25, 3.375, 5.0625 (1.5배씩 증가)
-            waveData.goldRewardMultiplier = 1.8f + relativeIndex * 0.35f; // 1.3, 1.65, 2.0 (약 35%씩 증가)
+            waveData.speedMultiplier = 1.35f + relativeIndex * 0.12f; // 1.15, 1.27, 1.39 (약 12%씩 증가)
+            waveData.healthMultiplier = 4f * Mathf.Pow(1.3f, relativeIndex); // 2.25, 3.375, 5.0625 (1.5배씩 증가)
+            waveData.goldRewardMultiplier = 1.6f + relativeIndex * 0.35f; // 1.3, 1.65, 2.0 (약 35%씩 증가)
         }
         else if (waveIndex <= 10) // Wave 7-10: 어려움
         {
             int relativeIndex = waveIndex - 7; // 0, 1, 2, 3 (Wave 7, 8, 9, 10)
-            waveData.enemyCount = Mathf.RoundToInt(26 * Mathf.Pow(1.4f, relativeIndex)); // 26, 36, 51, 71 (약 1.4배씩 증가)
+            waveData.enemyCount = Mathf.RoundToInt(26 * Mathf.Pow(1.1f, relativeIndex)); // 26, 36, 51, 71 (약 1.4배씩 증가)
             waveData.spawnInterval = Mathf.Max(0.3f, 0.7f - relativeIndex * 0.1f); // 0.7, 0.6, 0.5, 0.4
             // maxEnemiesAtOnce 제거됨 - 제한 없음
-            waveData.speedMultiplier = 1.3f + relativeIndex * 0.15f; // 1.3, 1.45, 1.6, 1.75 (약 15%씩 증가)
-            waveData.healthMultiplier = 5.0625f * Mathf.Pow(1.5f, relativeIndex); // 5.0625, 7.59375, 11.390625, 17.0859375 (1.5배씩 증가)
-            waveData.goldRewardMultiplier = 2.1f + relativeIndex * 0.4f; // 1.6, 2.0, 2.4, 2.8 (약 40%씩 증가)
+            waveData.speedMultiplier = 1.5f + relativeIndex * 0.19f; // 1.3, 1.45, 1.6, 1.75 (약 15%씩 증가)
+            waveData.healthMultiplier = 7f * Mathf.Pow(1.2f, relativeIndex); // 5.0625, 7.59375, 11.390625, 17.0859375 (1.5배씩 증가)
+            waveData.goldRewardMultiplier = 1.8f + relativeIndex * 0.4f; // 1.6, 2.0, 2.4, 2.8 (약 40%씩 증가)
         }
         else // Wave 11+: 최고 난이도
         {
             int relativeIndex = waveIndex - 11; // 0, 1, 2, ... (Wave 11, 12, 13, ...)
-            waveData.enemyCount = Mathf.RoundToInt(40 * Mathf.Pow(1.5f, relativeIndex)); // 40, 60, 90, 135, ... (약 1.5배씩 증가)
-            waveData.spawnInterval = Mathf.Max(0.2f, 0.55f - relativeIndex * 0.08f); // 0.55, 0.47, 0.39, ...
+            waveData.enemyCount = Mathf.RoundToInt(40 * Mathf.Pow(1.1f, relativeIndex)); // 40, 60, 90, 135, ... (약 1.5배씩 증가)
+            waveData.spawnInterval = Mathf.Max(0.01f, 0.55f - relativeIndex * 0.08f); // 0.55, 0.47, 0.39, ...
             // maxEnemiesAtOnce 제거됨 - 제한 없음
-            waveData.speedMultiplier = 1.45f + relativeIndex * 0.18f; // 1.45, 1.63, 1.81, ... (약 18%씩 증가)
-            waveData.healthMultiplier = 17.0f * Mathf.Pow(1.5f, relativeIndex); // 17., 25.62890625, 38.443359375, ... (1.5배씩 증가)
-            waveData.goldRewardMultiplier = 2.9f + relativeIndex * 0.5f; // 1.9, 2.4, 2.9, ... (약 50%씩 증가)
+            waveData.speedMultiplier = 1.95f + relativeIndex * 0.38f; // 1.45, 1.63, 1.81, ... (약 18%씩 증가)
+            waveData.healthMultiplier = 10.0f * Mathf.Pow(1.1f, relativeIndex); // 17., 25.62890625, 38.443359375, ... (1.5배씩 증가)
+            waveData.goldRewardMultiplier = 2.1f + relativeIndex * 0.5f; // 1.9, 2.4, 2.9, ... (약 50%씩 증가)
         }
 
         // 공통 설정

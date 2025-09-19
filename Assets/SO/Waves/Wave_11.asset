@@ -17,6 +17,6 @@ MonoBehaviour:
   enemyPrefab: {fileID: 0}
   enemyCount: 40
   spawnInterval: 0.55
-  speedMultiplier: 1.45
-  healthMultiplier: 17
-  goldRewardMultiplier: 2.9
+  speedMultiplier: 1.95
+  healthMultiplier: 10
+  goldRewardMultiplier: 2.1

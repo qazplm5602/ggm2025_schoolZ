@@ -21,14 +21,13 @@ MonoBehaviour:
   attackRange: 9
   attackDamage: 5
   attackCooltime: 0.3
-  useStunEffect: 0
-  stunDuration: 2
-  useSlowEffect: 0
-  slowDuration: 3
-  slowSpeedMultiplier: 0.5
+  useStunEffect: 1
+  stunDuration: 0.02
+  useSlowEffect: 1
+  slowDuration: 1
+  slowSpeedMultiplier: 0.1
   useAreaAttack: 1
   areaAttackRadius: 1
   canUpgrade: 1
   upgradedVersion1: {fileID: 11400000, guid: 14c8f6cb886121645a81b853e6cc9daa, type: 2}
   upgradedVersion2: {fileID: 11400000, guid: 9ace43bcf1fd1794695e314637c7c40a, type: 2}
-  upgradedVersion: {fileID: 0}

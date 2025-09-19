@@ -15,8 +15,8 @@ MonoBehaviour:
   waveName: Wave 18
   description: "18\uBC88\uC9F8 \uC6E8\uC774\uBE0C - \uB09C\uC774\uB3C4: \uC5B4\uB824\uC6C0"
   enemyPrefab: {fileID: 0}
-  enemyCount: 683
-  spawnInterval: 0.2
-  speedMultiplier: 2.71
-  healthMultiplier: 290.46094
-  goldRewardMultiplier: 6.4
+  enemyCount: 78
+  spawnInterval: 0.01
+  speedMultiplier: 4.61
+  healthMultiplier: 19.487173
+  goldRewardMultiplier: 5.6

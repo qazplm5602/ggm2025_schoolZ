@@ -18,8 +18,23 @@ public class PlayerMovement : AgentMovement
     {
         base.InitAgent(agent);
         controller = GetComponent<CharacterController>();
+
+        // Animator 컴포넌트 찾기
         animator = GetComponentInChildren<Animator>();
-        input.OnJumpChange += HandleChangeJump;
+        if (animator == null)
+        {
+            Debug.LogWarning("PlayerMovement: Animator 컴포넌트를 찾을 수 없습니다. 애니메이션 없이 동작합니다.");
+        }
+
+        // InputSO 연결 확인
+        if (input != null)
+        {
+            input.OnJumpChange += HandleChangeJump;
+        }
+        else
+        {
+            Debug.LogError("PlayerMovement: InputSO가 설정되지 않았습니다!");
+        }
     }
 
     protected override void Update()
@@ -60,7 +75,12 @@ public class PlayerMovement : AgentMovement
             }
         }
         camTrm.position = transform.position + Vector3.up * camHeight;
-        animator.SetFloat("MoveSpeed", Mathf.Lerp(animator.GetFloat("MoveSpeed"), move.sqrMagnitude > 0f ? 1 : 0, Time.deltaTime * 10));
+
+        // Animator가 있는 경우에만 애니메이션 업데이트
+        if (animator != null)
+        {
+            animator.SetFloat("MoveSpeed", Mathf.Lerp(animator.GetFloat("MoveSpeed"), move.sqrMagnitude > 0f ? 1 : 0, Time.deltaTime * 10));
+        }
 
         // 중력 적용
         if (controller.isGrounded)

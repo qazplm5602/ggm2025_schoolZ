@@ -896,7 +896,6 @@ public class TowerPlacementSystem : MonoBehaviour
         if (goldText != null)
         {
             goldText.text = $"Gold: {newGoldAmount}";
-            Debug.Log($"UI 골드 표시 업데이트: {newGoldAmount}G");
         }
     }
 

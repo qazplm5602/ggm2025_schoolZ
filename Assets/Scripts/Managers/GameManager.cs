@@ -66,11 +66,6 @@ public class GameManager : MonoBehaviour
             TogglePause();
         }
 
-        // 게임 재시작 (R 키)
-        if (isGameOver && Keyboard.current.rKey.wasPressedThisFrame)
-        {
-            RestartGame();
-        }
     }
 
     /// <summary>
@@ -111,6 +106,8 @@ public class GameManager : MonoBehaviour
         isGameStarted = true;
         isGameOver = false;
 
+        // 게임 속도를 원래대로 복원
+        SetGameSpeed(1f);
 
         // 웨이브 매니저는 수동으로 시작됨 (플레이어 버튼 클릭)
         // waveManager.StartWave(0); // 제거됨
@@ -160,69 +157,7 @@ public class GameManager : MonoBehaviour
         OnGameOver();
     }
 
-    /// <summary>
-    /// 게임 재시작 (씬 리로딩 대신 상태 리셋)
-    /// </summary>
-    public void RestartGame()
-    {
-        StartCoroutine(RestartGameCoroutine());
-    }
 
-    /// <summary>
-    /// 게임 재시작 코루틴
-    /// </summary>
-    private IEnumerator RestartGameCoroutine()
-    {
-        // 게임 상태 초기화
-        isGameOver = false;
-        isGameStarted = false;
-        currentGold = initialGold;
-
-        // WaveManager 리셋
-        if (waveManager != null)
-        {
-            waveManager.ResetWaveManager();
-        }
-
-        // TowerPlacementSystem 리셋 (필요시 구현)
-        // ...
-
-        // 모든 적 제거
-        BaseEnemy[] enemies = FindObjectsByType<BaseEnemy>(FindObjectsSortMode.None);
-        foreach (var enemy in enemies)
-        {
-            if (enemy != null)
-            {
-                Destroy(enemy.gameObject);
-            }
-        }
-
-        // 모든 타워 제거 (업그레이드된 타워들도 포함)
-        BaseTower[] towers = FindObjectsByType<BaseTower>(FindObjectsSortMode.None);
-        foreach (var tower in towers)
-        {
-            if (tower != null)
-            {
-                Destroy(tower.gameObject);
-            }
-        }
-
-        // 플레이어 위치 리셋 (필요시)
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        if (player != null)
-        {
-            // 플레이어 초기 위치로 이동 (필요시 구현)
-            // player.transform.position = initialPlayerPosition;
-        }
-
-        // 잠시 대기하여 오브젝트들이 완전히 파괴되도록 함
-        yield return new WaitForSeconds(0.1f);
-
-        // 게임 재시작
-        StartGame();
-
-        Debug.Log("게임이 완전히 리셋되고 재시작되었습니다.");
-    }
 
     /// <summary>
     /// 게임 승리
@@ -252,7 +187,49 @@ public class GameManager : MonoBehaviour
 
     private void OnGameOver()
     {
-        // 게임 오버 시 처리할 내용들
+        if (WaveManager.Instance != null)
+        {
+            WaveManager.Instance.ShowWarningMessage("게임 오버!", 3f);
+        }
+
+        SetGameSpeed(0.05f);
+        StartCoroutine(GameOverSequence());
+    }
+
+    /// <summary>
+    /// 게임 오버 처리 시퀀스
+    /// </summary>
+    private IEnumerator GameOverSequence()
+    {
+        // 메시지 표시 시간만큼 대기
+        yield return new WaitForSeconds(0.05f);
+
+        // 게임 종료
+        QuitGame();
+    }
+
+    /// <summary>
+    /// 게임 종료 메소드 (GameManager에서 담당)
+    /// </summary>
+    private void QuitGame()
+    {
+        Debug.Log("GameManager: 게임을 종료합니다...");
+
+        // 모든 코루틴 즉시 중지
+        StopAllCoroutines();
+
+        // 에디터에서 실행 중인지 빌드에서 실행 중인지 확인
+        #if UNITY_EDITOR
+            // Unity 에디터에서는 플레이 모드 종료
+            Debug.Log("GameManager: Unity 에디터 플레이 모드를 종료합니다.");
+            UnityEditor.EditorApplication.isPlaying = false;
+        #else
+            // 빌드된 게임에서는 애플리케이션 종료
+            Debug.Log("GameManager: 빌드된 게임을 종료합니다.");
+            Application.Quit();
+        #endif
+
+        Debug.Log("GameManager: 게임 종료 프로세스 완료");
     }
 
     private void OnGameWin()

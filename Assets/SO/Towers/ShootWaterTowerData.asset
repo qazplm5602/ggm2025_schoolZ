@@ -23,11 +23,10 @@ MonoBehaviour:
   useStunEffect: 0
   stunDuration: 2
   useSlowEffect: 1
-  slowDuration: 0.5
-  slowSpeedMultiplier: 0.5
+  slowDuration: 0.2
+  slowSpeedMultiplier: 0.7
   useAreaAttack: 1
   areaAttackRadius: 1
   canUpgrade: 0
   upgradedVersion1: {fileID: 0}
   upgradedVersion2: {fileID: 0}
-  upgradedVersion: {fileID: 0}

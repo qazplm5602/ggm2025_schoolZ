@@ -19,15 +19,14 @@ MonoBehaviour:
   cost: 1500
   attackRange: 10
   attackDamage: 200
-  attackCooltime: 5
+  attackCooltime: 10
   useStunEffect: 1
-  stunDuration: 0.5
+  stunDuration: 5
   useSlowEffect: 1
-  slowDuration: 2
-  slowSpeedMultiplier: 0.2
+  slowDuration: 10
+  slowSpeedMultiplier: 0.5
   useAreaAttack: 1
   areaAttackRadius: 5
   canUpgrade: 0
   upgradedVersion1: {fileID: 0}
   upgradedVersion2: {fileID: 0}
-  upgradedVersion: {fileID: 0}

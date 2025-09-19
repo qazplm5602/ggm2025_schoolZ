@@ -1,14 +1,11 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
-using System.Collections;
 
 public class Player : Agent
 {
-    [Header("게임 오버 설정")]
+    [Header("적 감지 설정")]
     [SerializeField] private string enemyTag = "Enemy"; // 적 태그
     [SerializeField] private LayerMask enemyLayer; // 적 레이어 (성능 최적화용)
-    [SerializeField] private float gameOverDelay = 5f; // 게임 오버 메시지 표시 시간
-    [SerializeField] private float detectionRadius = 1.5f; // 적 감지 반경
+    [SerializeField] private float detectionRadius = 0.4f; // 적 감지 반경
 
     private CharacterController characterController;
     private bool isGameOverTriggered = false; // 중복 게임 오버 방지
@@ -118,7 +115,16 @@ public class Player : Agent
         if (isGameOverTriggered) return;
 
         isGameOverTriggered = true;
-        StartCoroutine(HandleGameOver());
+
+        // GameManager에 게임 오버 알림 (GameManager에서 모든 처리)
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.GameOver();
+        }
+        else
+        {
+            Debug.LogError("GameManager.Instance가 null입니다!");
+        }
     }
 
     /// <summary>
@@ -147,42 +153,4 @@ public class Player : Agent
         }
     }
 
-    /// <summary>
-    /// 게임 오버 처리 코루틴
-    /// </summary>
-    private IEnumerator HandleGameOver()
-    {
-        // 게임 오버 상태로 변경
-        if (GameManager.Instance != null)
-        {
-            GameManager.Instance.GameOver();
-        }
-
-        // 패배 메시지 표시
-        WaveManager waveManager = FindObjectOfType<WaveManager>();
-        if (waveManager != null)
-        {
-            waveManager.ShowWarningMessage("패배! 게임을 다시 시작합니다...", gameOverDelay);
-            Debug.Log("패배 메시지를 표시했습니다.");
-        }
-        else
-        {
-            Debug.LogError("WaveManager를 찾을 수 없습니다!");
-        }
-
-        // 지정된 시간만큼 대기
-        yield return new WaitForSeconds(gameOverDelay);
-
-        // GameManager를 통한 게임 재시작 (씬 리로딩 대신 상태 리셋)
-        if (GameManager.Instance != null)
-        {
-            GameManager.Instance.RestartGame();
-        }
-        else
-        {
-            // GameManager가 없는 경우에만 씬 리로딩 사용 (fallback)
-            Scene currentScene = SceneManager.GetActiveScene();
-            SceneManager.LoadScene(currentScene.name);
-        }
-    }
 }

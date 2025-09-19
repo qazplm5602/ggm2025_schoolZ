@@ -25,11 +25,10 @@ MonoBehaviour:
   useStunEffect: 1
   stunDuration: 0.5
   useSlowEffect: 1
-  slowDuration: 3
+  slowDuration: 2
   slowSpeedMultiplier: 0.15
   useAreaAttack: 0
   areaAttackRadius: 2
   canUpgrade: 1
   upgradedVersion1: {fileID: 11400000, guid: 141deedae8f424543b629295556df4dd, type: 2}
   upgradedVersion2: {fileID: 11400000, guid: f21c10ae34dbcc044a2105aff56caefa, type: 2}
-  upgradedVersion: {fileID: 0}

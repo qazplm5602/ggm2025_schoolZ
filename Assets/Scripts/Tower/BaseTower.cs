@@ -85,19 +85,16 @@ public abstract class BaseTower : MonoBehaviour
     
     public virtual void UpgradeTower()
     {
-        // 하위 호환성: 기존 upgradedVersion이 있으면 사용
-        if (towerData?.canUpgrade == true && towerData.upgradedVersion != null)
-        {
-            // 데이터 업그레이드
-            towerData = towerData.upgradedVersion;
-            OnUpgraded();
-        }
-        // 새로운 방식: upgradedVersion1이 있으면 사용
-        else if (towerData?.canUpgrade == true && towerData.upgradedVersion1 != null)
+        // 업그레이드 옵션이 있는 경우 첫 번째 옵션으로 업그레이드
+        if (towerData?.canUpgrade == true && towerData.upgradedVersion1 != null)
         {
             // 기본적으로 첫 번째 옵션으로 업그레이드
             towerData = towerData.upgradedVersion1;
             OnUpgraded();
+        }
+        else
+        {
+            Debug.LogWarning("업그레이드할 수 있는 타워 버전이 없습니다.");
         }
     }
 
