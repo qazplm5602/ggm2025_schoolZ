@@ -44,6 +44,15 @@ public abstract class BaseEnemy : Agent, IEnemy
     protected const float JUMP_THRESHOLD_TIME = 0.3f;
     protected NavMeshPath lastCalculatedPath;
 
+    // 경로 검사 최적화
+    protected float lastPathCheckTime = 0f;
+    protected const float PATH_CHECK_INTERVAL = 1.0f; // 1초마다 경로 검사
+
+    // 경로 존재 여부 캐싱 (성능 최적화)
+    protected bool? cachedPathExists = null;
+    protected float lastPathCacheTime = 0f;
+    protected const float PATH_CACHE_DURATION = 0.2f; // 0.2초 동안 캐시 유지
+
     // 컴포넌트 레퍼런스
     protected AgentMovement agentMovement;
     protected Transform playerTransform;
@@ -259,14 +268,40 @@ public abstract class BaseEnemy : Agent, IEnemy
 
     private bool CheckActualPathExists()
     {
-        if (playerTransform == null) return false;
+        // 캐시된 결과가 유효한지 확인
+        if (cachedPathExists.HasValue && Time.time - lastPathCacheTime < PATH_CACHE_DURATION)
+        {
+            return cachedPathExists.Value;
+        }
 
-        NavMesh.SamplePosition(transform.position, out NavMeshHit enemyHit, 1.0f, NavMesh.AllAreas);
-        NavMesh.SamplePosition(playerTransform.position, out NavMeshHit playerHit, 1.0f, NavMesh.AllAreas);
+        if (playerTransform == null)
+        {
+            cachedPathExists = false;
+            lastPathCacheTime = Time.time;
+            return false;
+        }
+
+        // NavMesh 위의 유효한 포인트가 있는지 먼저 확인
+        bool enemyValid = NavMesh.SamplePosition(transform.position, out NavMeshHit enemyHit, 1.0f, NavMesh.AllAreas);
+        bool playerValid = NavMesh.SamplePosition(playerTransform.position, out NavMeshHit playerHit, 1.0f, NavMesh.AllAreas);
+
+        // 둘 다 유효한 포인트가 있어야 경로 계산 진행
+        if (!enemyValid || !playerValid)
+        {
+            cachedPathExists = false;
+            lastPathCacheTime = Time.time;
+            return false;
+        }
 
         lastCalculatedPath = new NavMeshPath();
-        return NavMesh.CalculatePath(enemyHit.position, playerHit.position, NavMesh.AllAreas, lastCalculatedPath) &&
-               lastCalculatedPath.status == NavMeshPathStatus.PathComplete;
+        bool pathExists = NavMesh.CalculatePath(enemyHit.position, playerHit.position, NavMesh.AllAreas, lastCalculatedPath) &&
+                         lastCalculatedPath.status == NavMeshPathStatus.PathComplete;
+
+        // 결과 캐싱
+        cachedPathExists = pathExists;
+        lastPathCacheTime = Time.time;
+
+        return pathExists;
     }
 
 
@@ -275,7 +310,8 @@ public abstract class BaseEnemy : Agent, IEnemy
         if (!IsAlive || playerTransform == null || agentMovement == null) return;
 
         // 보험용: 경로가 없고 일정 시간 지나면 점프
-        if (!CheckActualPathExists() && pathFailureTime >= JUMP_THRESHOLD_TIME)
+        // TrackPlayer()에서 이미 검사하므로 여기서는 최소한의 검사만 수행
+        if (cachedPathExists.HasValue && !cachedPathExists.Value && pathFailureTime >= JUMP_THRESHOLD_TIME)
         {
             StartCoroutine(JumpToPlayer());
             pathFailureTime = 0f;
@@ -362,7 +398,14 @@ public abstract class BaseEnemy : Agent, IEnemy
 
         UpdateSpecialEffects();
         Move();
-        CheckNavMeshAgentPath();
+
+        // 경로 검사는 일정 간격으로만 수행 (성능 최적화)
+        if (Time.time - lastPathCheckTime >= PATH_CHECK_INTERVAL)
+        {
+            CheckNavMeshAgentPath();
+            lastPathCheckTime = Time.time;
+        }
+
         UpdateHealthBar();
     }
 }

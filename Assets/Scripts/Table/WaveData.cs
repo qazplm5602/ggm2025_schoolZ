@@ -1,7 +1,7 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "WaveData", menuName = "Tower Defense/Wave Data")]
-public class WaveData : ScriptableObject
+[CreateAssetMenu(fileName = "TableWaveData", menuName = "Tower Defense/Table Wave Data")]
+public class TableWaveData : ScriptableObject
 {
     [Header("기본 설정")]
     public string waveName = "Wave";
