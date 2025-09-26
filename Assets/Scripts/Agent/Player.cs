@@ -36,6 +36,13 @@ public class Player : Agent
 
     private void Update()
     {
+        // UI가 활성화되어 있는 동안은 모든 적 감지 로직을 완전 중지 (안전성 보장)
+        if (TowerPlacementSystem.Instance != null && TowerPlacementSystem.Instance.IsUIActive)
+        {
+            Debug.Log($"UI 활성화 중 - 모든 적 감지 완전 중지 (플레이어 위치: {transform.position})");
+            return;
+        }
+
         // Character Controller가 있는 경우 매 프레임 충돌 체크
         if (characterController != null && !isGameOverTriggered)
         {
@@ -92,7 +99,7 @@ public class Player : Agent
     /// </summary>
     private bool IsEnemy(GameObject obj)
     {
-        // 태그 확인
+        // 태그 확인 (가장 간단하고 확실한 방법)
         if (obj.CompareTag(enemyTag))
         {
             return true;
@@ -134,6 +141,13 @@ public class Player : Agent
     {
         if (isGameOverTriggered) return;
 
+        // UI 활성화 중에는 모든 적 감지 완전 무시
+        if (TowerPlacementSystem.Instance != null && TowerPlacementSystem.Instance.IsUIActive)
+        {
+            Debug.Log($"UI 활성화 중 - OnControllerColliderHit 적 감지 무시 (충돌 오브젝트: {hit.gameObject.name})");
+            return;
+        }
+
         if (IsEnemy(hit.gameObject))
         {
             TriggerGameOver();
@@ -146,6 +160,13 @@ public class Player : Agent
     private void OnTriggerEnter(Collider other)
     {
         if (isGameOverTriggered) return;
+
+        // UI 활성화 중에는 모든 적 감지 완전 무시
+        if (TowerPlacementSystem.Instance != null && TowerPlacementSystem.Instance.IsUIActive)
+        {
+            Debug.Log($"UI 활성화 중 - OnTriggerEnter 적 감지 무시 (충돌 오브젝트: {other.gameObject.name})");
+            return;
+        }
 
         if (IsEnemy(other.gameObject))
         {

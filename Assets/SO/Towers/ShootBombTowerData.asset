@@ -21,8 +21,8 @@ MonoBehaviour:
   attackRange: 9
   attackDamage: 50
   attackCooltime: 3
-  useStunEffect: 1
-  stunDuration: 1
+  useStunEffect: 0
+  stunDuration: 0
   useSlowEffect: 1
   slowDuration: 2
   slowSpeedMultiplier: 0.2

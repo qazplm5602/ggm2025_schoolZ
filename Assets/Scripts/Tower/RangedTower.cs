@@ -86,7 +86,30 @@ public class RangedTower : BaseTower
             if (enemy != null)
             {
                 enemy.TakeDamage(AttackDamage);
+
+                // 스턴 효과 적용 (범위 내 모든 적에게)
+                if (towerData.useStunEffect)
+                {
+                    BaseEnemy baseEnemy = collider.GetComponent<BaseEnemy>();
+                    if (baseEnemy != null)
+                    {
+                        baseEnemy.ApplyStun(towerData.stunDuration);
+                    }
+                }
             }
+        }
+    }
+
+    /// <summary>
+    /// 원거리 타워는 범위 공격 시 개별 타겟 효과 적용을 오버라이드
+    /// </summary>
+    protected override void ApplySpecialEffectsToTarget()
+    {
+        // RangedTower는 범위 공격 시 PerformAreaAttack에서 이미 범위 효과를 적용하므로
+        // BaseTower의 개별 타겟 효과 적용을 무시 (범위 공격이 아닐 때만 적용)
+        if (towerData != null && !towerData.useAreaAttack)
+        {
+            base.ApplySpecialEffectsToTarget();
         }
     }
 

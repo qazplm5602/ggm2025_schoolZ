@@ -181,7 +181,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2274726958456971785}
-  - component: {fileID: 1033389979400937371}
   m_Layer: 8
   m_Name: Seat
   m_TagString: Untagged
@@ -206,22 +205,6 @@ Transform:
   - {fileID: 2465227901481732454}
   m_Father: {fileID: 7707263283237583271}
   m_LocalEulerAnglesHint: {x: -90, y: 0, z: 0}
---- !u!208 &1033389979400937371
-NavMeshObstacle:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6264775885836732766}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Shape: 1
-  m_Extents: {x: 0.00175, y: 0.00175, z: 0.00175}
-  m_MoveThreshold: 0.1
-  m_Carve: 1
-  m_CarveOnlyStationary: 1
-  m_Center: {x: 0, y: 0.001, z: 0.008}
-  m_TimeToStationary: 0.5
 --- !u!1 &7630945287729654411
 GameObject:
   m_ObjectHideFlags: 0
@@ -234,6 +217,7 @@ GameObject:
   - component: {fileID: 623592668087637724}
   - component: {fileID: 8501970655953515121}
   - component: {fileID: 1305088933052515410}
+  - component: {fileID: 5109383202905951171}
   m_Layer: 8
   m_Name: Seat
   m_TagString: Untagged
@@ -308,3 +292,19 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.8, y: 0.8, z: 0.8}
   m_Center: {x: 0, y: 0.65, z: 0}
+--- !u!208 &5109383202905951171
+NavMeshObstacle:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7630945287729654411}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Shape: 0
+  m_Extents: {x: 0.16, y: 1.5, z: 0.16}
+  m_MoveThreshold: 0.1
+  m_Carve: 1
+  m_CarveOnlyStationary: 1
+  m_Center: {x: 0, y: 1, z: 0}
+  m_TimeToStationary: 0.5

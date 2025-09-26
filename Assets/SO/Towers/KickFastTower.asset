@@ -22,7 +22,7 @@ MonoBehaviour:
   attackRange: 2
   attackDamage: 100
   attackCooltime: 1
-  useStunEffect: 1
+  useStunEffect: 0
   stunDuration: 0.1
   useSlowEffect: 1
   slowDuration: 1

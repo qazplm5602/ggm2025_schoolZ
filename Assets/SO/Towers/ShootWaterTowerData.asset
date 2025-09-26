@@ -24,7 +24,7 @@ MonoBehaviour:
   stunDuration: 2
   useSlowEffect: 1
   slowDuration: 0.2
-  slowSpeedMultiplier: 0.7
+  slowSpeedMultiplier: 0.5
   useAreaAttack: 1
   areaAttackRadius: 1
   canUpgrade: 0

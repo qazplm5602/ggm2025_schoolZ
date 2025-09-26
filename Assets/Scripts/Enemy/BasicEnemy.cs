@@ -9,9 +9,9 @@ public class BasicEnemy : BaseEnemy
     private Renderer enemyRenderer;
     private Color originalColor;
     
-    protected override void Start()
+    private void Start()
     {
-        base.Start();
+        base.Initialize();
         
         // 렌더러 컴포넌트 찾기
         enemyRenderer = GetComponent<Renderer>();

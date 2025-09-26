@@ -21,11 +21,11 @@ MonoBehaviour:
   attackRange: 15
   attackDamage: 8
   attackCooltime: 0.1
-  useStunEffect: 1
-  stunDuration: 0.05
+  useStunEffect: 0
+  stunDuration: 0.01
   useSlowEffect: 0
   slowDuration: 1
-  slowSpeedMultiplier: 0.5
+  slowSpeedMultiplier: 0.3
   useAreaAttack: 1
   areaAttackRadius: 1
   canUpgrade: 0

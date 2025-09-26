@@ -19,4 +19,4 @@ MonoBehaviour:
   spawnInterval: 0.55
   speedMultiplier: 1.59
   healthMultiplier: 6.7599993
-  goldRewardMultiplier: 2.3
+  goldRewardMultiplier: 5

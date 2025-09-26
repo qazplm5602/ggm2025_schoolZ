@@ -19,13 +19,13 @@ MonoBehaviour:
   towerIcon: {fileID: 21300000, guid: e9202e1cee334394ab388b4b519e9eaf, type: 3}
   cost: 1000
   attackRange: 3
-  attackDamage: 300
+  attackDamage: 100
   attackCooltime: 4
   useStunEffect: 1
-  stunDuration: 2
+  stunDuration: 0.5
   useSlowEffect: 0
   slowDuration: 10
-  slowSpeedMultiplier: 0.5
+  slowSpeedMultiplier: 0.3
   useAreaAttack: 0
   areaAttackRadius: 2
   canUpgrade: 0

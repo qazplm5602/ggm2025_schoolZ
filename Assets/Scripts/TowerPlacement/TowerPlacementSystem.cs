@@ -54,8 +54,8 @@ public class TowerPlacementSystem : MonoBehaviour
     private Transform playerTransform; // 플레이어 Transform
     private BaseTower selectedTower; // 선택된 타워 (업그레이드용)
     private bool isUIAnimating = false; // UI 애니메이션 진행 중 여부
-    private bool isUIShowing = false; // UI가 완전히 표시되고 있는 상태
     private UIMode currentMode; // 현재 UI 모드
+    private const float SLOW_TIME_SCALE = 0.3f; // UI 표시 중 시간 배율 (30%)
 
     private void Awake()
     {
@@ -114,21 +114,14 @@ public class TowerPlacementSystem : MonoBehaviour
 
     private void Update()
     {
-        // Tab 키로 생성 UI 토글 (애니메이션 진행 중이 아닐 때만)
-        if (Keyboard.current != null && Keyboard.current.tabKey.wasPressedThisFrame && !isUIAnimating)
+        // Tab 키로 UI 토글 (빠른 타이밍에서도 동작)
+        if (Keyboard.current != null && Keyboard.current.tabKey.wasPressedThisFrame)
         {
             ToggleUI();
         }
 
-        // UI 상태 모니터링 (디버깅용) - UI가 완전히 표시된 상태에서만 체크
-        if (isUIShowing && mainUI != null && mainUI.activeSelf &&
-            selectedTower == null && activeZone == null)
-        {
-            Debug.LogWarning("비정상 상태 감지: UI가 활성화되어 있지만 타워나 존이 선택되지 않았습니다.");
-        }
-
-        // ESC 키로 메인 UI 닫기 (애니메이션 진행 중이 아닐 때만)
-        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame && !isUIAnimating)
+        // ESC 키로 메인 UI 닫기 (빠른 타이밍에서도 동작)
+        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
             if (mainUI != null && mainUI.activeSelf)
             {
@@ -142,11 +135,40 @@ public class TowerPlacementSystem : MonoBehaviour
     /// </summary>
     private void ToggleUI()
     {
-        // 메인 UI가 표시되어 있다면 먼저 닫기
+        // UI 상태에 따라 처리
         if (mainUI != null && mainUI.activeSelf)
         {
+            // UI가 표시되어 있으면 숨김 처리
             HideMainUI();
-            return;
+        }
+        else
+        {
+            // UI가 표시되어 있지 않으면 표시 처리
+            // 애니메이션이 진행 중이더라도 상태를 강제 리셋하고 새로운 UI 표시
+            ForceShowUI();
+        }
+    }
+
+    /// <summary>
+    /// 강제로 UI를 표시 (애니메이션 상태와 무관하게)
+    /// </summary>
+    private void ForceShowUI()
+    {
+        // 현재 UI 상태 강제 초기화
+        isUIAnimating = false;
+        activeZone = null;
+        selectedTower = null;
+
+        // 기존 애니메이션이 진행 중일 수 있으니 즉시 중단
+        if (mainUI != null)
+        {
+            mainUI.SetActive(false);
+            CanvasGroup canvasGroup = mainUI.GetComponent<CanvasGroup>();
+            if (canvasGroup != null)
+            {
+                canvasGroup.alpha = 1f;
+            }
+            mainUI.transform.localScale = Vector3.one;
         }
 
         // 1. 설치된 타워가 있는 Zone들을 확인 (업그레이드 우선)
@@ -169,10 +191,231 @@ public class TowerPlacementSystem : MonoBehaviour
                 currentMode = UIMode.Placement;
                 ShowMainUI();
             }
+            else
+            {
+                Debug.Log("주변에 타워 설치 위치가 없습니다.");
+            }
         }
         else
         {
+            Debug.Log("주변에 타워 설치 위치가 없습니다.");
         }
+    }
+
+
+
+
+    // UI 활성화 시점에 저장된 플레이어와 카메라 위치
+    private Vector3 lockedPlayerPosition;
+    private Quaternion lockedPlayerRotation;
+    private Vector3 lockedCameraPosition;
+    private Quaternion lockedCameraRotation;
+
+    // UI 활성화 전 원래 플레이어와 카메라 위치 (게임 플레이 위치)
+    private Vector3 originalPlayerPosition;
+    private Quaternion originalPlayerRotation;
+    private Vector3 originalCameraPosition;
+    private Quaternion originalCameraRotation;
+
+    /// <summary>
+    /// UI 활성화 시점에 모든 물리적 불안정을 즉시 완전 제거 (원자적 처리)
+    /// </summary>
+    private void StabilizePhysics()
+    {
+        Debug.Log("=== UI 활성화 - 원자적 물리 완전 정지 시작 ===");
+
+        // === 모든 업데이트를 일시적으로 중지하여 충돌 방지 ===
+        isUIAnimating = true; // 즉시 애니메이션 플래그 설정
+
+        try
+        {
+            // 1. 플레이어 물리 즉시 완전 정지 (원자적)
+            if (playerTransform != null)
+            {
+                Debug.Log($"플레이어 원자적 물리 정지 시작 - 위치: {playerTransform.position}");
+
+                // === CharacterController 잔여 움직임 완전 제거 ===
+                CharacterController controller = playerTransform.GetComponent<CharacterController>();
+                if (controller != null)
+                {
+                    // 현재 위치 저장
+                    Vector3 currentPos = playerTransform.position;
+                    Quaternion currentRot = playerTransform.rotation;
+
+                    // 1. CharacterController 완전 비활성화
+                    controller.enabled = false;
+
+                    // 2. Transform 위치 완전 고정
+                    playerTransform.position = currentPos;
+                    playerTransform.rotation = currentRot;
+
+                    // 3. CharacterController 재활성화로 내부 상태 완전 초기화
+                    controller.enabled = true;
+
+                    // 4. 잔여 움직임 완전 제거 (여러 번 호출로 확실히 제거)
+                    controller.Move(Vector3.zero);
+                    controller.Move(Vector3.zero);
+                    controller.Move(Vector3.zero);
+
+                    Debug.Log($"CharacterController 잔여 움직임 완전 제거 완료 - 위치: {playerTransform.position}");
+                }
+
+                // Rigidbody 즉시 완전 정지
+                Rigidbody rb = playerTransform.GetComponent<Rigidbody>();
+                if (rb != null)
+                {
+                    rb.linearVelocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
+                    rb.isKinematic = true; // 즉시 완전 정지
+                    Debug.Log($"Rigidbody 원자적 정지 완료 - 위치: {playerTransform.position}");
+                } else {
+                    Debug.Log("플레이어에 Rigidbody가 없습니다.");
+                }
+            }
+
+            // 2. 모든 테이블 즉시 완전 정지 (원자적)
+            TableCore[] allTables = FindObjectsByType<TableCore>(FindObjectsSortMode.None);
+            Debug.Log($"총 {allTables.Length}개의 테이블 원자적 정지 시작");
+
+            foreach (var table in allTables)
+            {
+                if (table != null)
+                {
+                    Rigidbody tableRb = table.GetComponent<Rigidbody>();
+                    if (tableRb != null)
+                    {
+                        tableRb.linearVelocity = Vector3.zero;
+                        tableRb.angularVelocity = Vector3.zero;
+                        tableRb.isKinematic = true; // 즉시 완전 정지
+                        Debug.Log($"테이블 '{table.name}' 원자적 정지 완료");
+                    } else {
+                        Debug.Log($"테이블 '{table.name}'에 Rigidbody가 없습니다.");
+                    }
+                }
+            }
+
+            // 3. 모든 Rigidbody 즉시 완전 정지 (원자적)
+            Rigidbody[] allRigidbodies = FindObjectsByType<Rigidbody>(FindObjectsSortMode.None);
+            foreach (var rb in allRigidbodies)
+            {
+                if (rb != null && rb.gameObject != playerTransform?.gameObject)
+                {
+                    // kinematic으로 설정하기 전에 velocity를 0으로 설정 (안전하게)
+                    rb.linearVelocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
+                    rb.isKinematic = true; // 그 다음 kinematic으로 설정
+                    // kinematic 상태에서는 velocity를 다시 설정하지 않음
+                }
+            }
+
+            Debug.Log($"=== UI 활성화 - 원자적 물리 완전 정지 완료 - 총 Rigidbody: {allRigidbodies.Length} ===");
+        }
+        finally
+        {
+            // === 오류 발생 시에도 상태 복원 ===
+            isUIAnimating = false;
+        }
+    }
+
+
+    /// <summary>
+    /// UI 활성화 시점에 플레이어와 카메라 위치를 즉시 완전 고정
+    /// </summary>
+    private void LockPlayerAndCamera()
+    {
+        Debug.Log("=== 위치 고정 시작 ===");
+
+        if (playerTransform != null)
+        {
+            Debug.Log($"LOCK: LockPlayerAndCamera 시작 전 플레이어 위치: {playerTransform.position}");
+
+            // === CRITICAL FIX: UI 활성화 시점의 실제 플레이어 위치 저장 ===
+            // 이전에 이동된 위치가 아닌, 실제 게임 플레이 중이던 위치를 저장해야 함
+            lockedPlayerPosition = playerTransform.position;
+            lockedPlayerRotation = playerTransform.rotation;
+
+            Debug.Log($"LOCK: UI 활성화 시점 플레이어 실제 위치 저장: {lockedPlayerPosition}");
+
+            // === CharacterController와 Transform 동기화 ===
+            // PlayerMovement 컴포넌트에서 동기화 처리 (책임 분리)
+            PlayerMovement playerMovement = playerTransform.GetComponent<PlayerMovement>();
+            if (playerMovement != null)
+            {
+                playerMovement.ForceSyncCharacterController();
+                Debug.Log("PlayerMovement를 통한 CharacterController 동기화 완료");
+            }
+            else
+            {
+                Debug.LogWarning("PlayerMovement 컴포넌트를 찾을 수 없어 동기화 건너뜀");
+            }
+
+            // Rigidbody 강제 정지
+            Rigidbody rb = playerTransform.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+                rb.isKinematic = true;
+                rb.isKinematic = false;
+                Debug.Log($"Rigidbody 물리 즉시 정지 완료 - 위치: {lockedPlayerPosition}");
+            }
+        }
+
+        // 메인 카메라 즉시 고정
+        Camera mainCamera = Camera.main;
+        if (mainCamera != null)
+        {
+            lockedCameraPosition = mainCamera.transform.position;
+            lockedCameraRotation = mainCamera.transform.rotation;
+            Debug.Log($"카메라 위치 즉시 고정: {lockedCameraPosition}");
+        }
+
+        Debug.Log("=== 위치 고정 완료 ===");
+    }
+
+    /// <summary>
+    /// UI 비활성화 시점에 플레이어와 카메라 위치를 즉시 완전 복원
+    /// </summary>
+    private void RestorePlayerAndCamera()
+    {
+        Debug.Log("=== 위치 복원 시작 ===");
+
+        if (playerTransform != null)
+        {
+            // === CRITICAL FIX: UI 활성화 전 원래 게임 플레이 위치로 복원 ===
+            // lockedPlayerPosition이 아닌 originalPlayerPosition 사용
+            playerTransform.position = originalPlayerPosition;
+            playerTransform.rotation = originalPlayerRotation;
+
+            // CharacterController 강제 동기화
+            CharacterController controller = playerTransform.GetComponent<CharacterController>();
+            if (controller != null)
+            {
+                controller.enabled = false;
+                controller.enabled = true;
+                Debug.Log($"CharacterController 위치 즉시 복원: {originalPlayerPosition} (원래 게임 플레이 위치)");
+            }
+
+            // Rigidbody 상태 안정화
+            Rigidbody rb = playerTransform.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+                Debug.Log($"Rigidbody 위치 즉시 복원: {originalPlayerPosition} (원래 게임 플레이 위치)");
+            }
+        }
+
+        // 메인 카메라 즉시 복원 (원래 게임 플레이 카메라 위치)
+        Camera mainCamera = Camera.main;
+        if (mainCamera != null)
+        {
+            mainCamera.transform.position = originalCameraPosition;
+            mainCamera.transform.rotation = originalCameraRotation;
+            Debug.Log($"카메라 위치 즉시 복원: {originalCameraPosition} (원래 게임 플레이 카메라 위치)");
+        }
+
+        Debug.Log("=== 위치 복원 완료 ===");
     }
 
     /// <summary>
@@ -294,8 +537,6 @@ public class TowerPlacementSystem : MonoBehaviour
     /// </summary>
     private void ShowUpgradeUIForOccupiedZones(System.Collections.Generic.List<TowerPlacementZone> occupiedZones)
     {
-        Debug.Log($"업그레이드 UI 표시 시도: occupiedZones={occupiedZones?.Count ?? 0}, mainUI={mainUI != null}, actionObjects={actionObjects != null}");
-
         if (occupiedZones.Count == 0 || mainUI == null)
         {
             Debug.LogWarning("업그레이드 UI 표시 실패: 필수 컴포넌트가 null이거나 occupiedZones가 비어있음");
@@ -364,14 +605,62 @@ public class TowerPlacementSystem : MonoBehaviour
     }
 
     /// <summary>
+    /// 월드 시간을 느리게 설정
+    /// </summary>
+    private void SetSlowMotion(bool enable)
+    {
+        if (enable)
+        {
+            // UI 표시 중 시간 느리게 (항상 같은 값으로 설정)
+            Time.timeScale = SLOW_TIME_SCALE;
+            Time.fixedDeltaTime = 0.02f * SLOW_TIME_SCALE; // FixedUpdate도 느리게
+        }
+        else
+        {
+            // 시간 원래대로 복원 (항상 1로 설정)
+            Time.timeScale = 1f;
+            Time.fixedDeltaTime = 0.02f; // 원래 FixedUpdate 시간으로 복원
+        }
+    }
+
+    /// <summary>
     /// 통합 메인 UI 표시 (Dotween 애니메이션 적용)
     /// </summary>
     private void ShowMainUI()
     {
         if (mainUI == null) return;
 
+        // === UI 활성화 시작 - 모든 움직임 즉시 완전 정지 ===
+        Debug.Log("=== UI 활성화 시작 - 모든 움직임 즉시 완전 정지 ===");
+        Debug.Log("=== CRITICAL: UI 모드 진입 - CharacterController 잔여 움직임 제거 시작 ===");
+        Debug.Log($"UI 활성화 전 플레이어 위치: {playerTransform?.position ?? Vector3.zero}");
+
+        // === CRITICAL FIX: UI 활성화 전에 원래 플레이어 위치 저장 ===
+        // UI를 열기 전에 플레이어의 실제 게임 플레이 위치를 저장해야 함
+        if (playerTransform != null && !IsUIActive)
+        {
+            originalPlayerPosition = playerTransform.position;
+            originalPlayerRotation = playerTransform.rotation;
+            originalCameraPosition = Camera.main?.transform.position ?? Vector3.zero;
+            originalCameraRotation = Camera.main?.transform.rotation ?? Quaternion.identity;
+            // Debug.Log($"SAVE: UI 활성화 전 원래 플레이어 위치 저장: {originalPlayerPosition}");
+            // Debug.Log($"SAVE: UI 활성화 전 원래 카메라 위치: {originalCameraPosition}");
+        }
+
+        // === 플레이어 위치 유지 ===
+        // UI를 열 때 플레이어 위치를 변경하지 않음
+
+        // 1. 먼저 위치 고정 (Time.timeScale 변경 전)
+        LockPlayerAndCamera();
+        SetSlowMotion(true);
+        StabilizePhysics();
+
         // 애니메이션 진행 중 표시
         isUIAnimating = true;
+
+        Debug.Log($"=== UI 완전 활성화됨 - 플레이어 위치: {lockedPlayerPosition}, 카메라 위치: {lockedCameraPosition} ===");
+        Debug.Log($"UI 활성화 후 플레이어 위치: {playerTransform?.position ?? Vector3.zero}");
+        Debug.Log("=== 모든 시스템 즉시 정지 완료 - UI 안전 모드 활성화 ===");
 
         // UI 내용 먼저 설정
         switch (currentMode)
@@ -384,7 +673,7 @@ public class TowerPlacementSystem : MonoBehaviour
                 break;
         }
 
-        // Dotween을 사용한 부드러운 UI 표시 애니메이션
+        // Dotween을 사용한 부드러운 UI 표시 애니메이션 (실제 시간 기준으로 동작 - TimeScale 무시)
         CanvasGroup canvasGroup = mainUI.GetComponent<CanvasGroup>();
         if (canvasGroup == null)
         {
@@ -396,19 +685,21 @@ public class TowerPlacementSystem : MonoBehaviour
         canvasGroup.alpha = 0f;
         mainUI.transform.localScale = new Vector3(0.8f, 0.8f, 1f);
 
-        // 애니메이션 시퀀스 생성
+        // 애니메이션 시퀀스 생성 (실제 시간 기준으로 동작 - TimeScale 무시)
         Sequence showSequence = DOTween.Sequence();
+        showSequence.SetUpdate(UpdateType.Normal, true); // 실제 시간 기준으로 업데이트
 
-        // 스케일 업 + 페이드 인
+        // 스케일 업 + 페이드 인 (TimeScale 무시)
         showSequence.Append(mainUI.transform.DOScale(1f, 0.3f).SetEase(Ease.OutBack));
         showSequence.Join(canvasGroup.DOFade(1f, 0.3f).SetEase(Ease.OutQuad));
 
         // 애니메이션 완료 시 플래그 해제
         showSequence.OnComplete(() => {
             isUIAnimating = false;
-            isUIShowing = true; // UI 표시 완료
-            Debug.Log("메인 UI 표시 애니메이션 완료");
         });
+
+        // UI가 표시되는 즉시 슬로우모션 적용 (애니메이션 중에도)
+        SetSlowMotion(true);
 
         showSequence.Play();
 
@@ -618,7 +909,7 @@ public class TowerPlacementSystem : MonoBehaviour
         foreach (TowerPlacementZone zone in allZones)
         {
             float distance = Vector3.Distance(zone.transform.position, playerTransform.position);
-            if (distance <= 1.2f) // 좁은 거리 범위 (플레이어 주변 1.2m)
+            if (distance <= 1.1f) // 더 좁은 거리 범위 (플레이어 주변 1.1m)
             {
                 nearbyZones.Add(zone);
             }
@@ -630,38 +921,59 @@ public class TowerPlacementSystem : MonoBehaviour
     /// </summary>
     public void HideMainUI()
     {
-        Debug.Log($"HideMainUI 호출: mainUI={mainUI != null}, activeZone={activeZone != null}, selectedTower={selectedTower != null}");
+        // UI 상태 초기화
+        activeZone = null;
+        selectedTower = null;
 
         // 애니메이션 진행 중 표시
         isUIAnimating = true;
 
-        activeZone = null;
-        selectedTower = null;
+        // === UI 비활성화 시작 - 모든 시스템 안전 복원 ===
+        Debug.Log("=== UI 비활성화 시작 - 모든 시스템 안전 복원 ===");
+        Debug.Log($"UI 비활성화 전 플레이어 위치: {playerTransform?.position ?? Vector3.zero}");
+
+        // 1. 시간 복원
+        Debug.Log("Step 1: Time.timeScale 복원 시작");
+        SetSlowMotion(false);
+        Debug.Log("Step 1: Time.timeScale 복원 완료");
+
+        // 2. 물리 상태 안정화 생략 (UI 종료 시 불필요)
+
+        // 3. 플레이어와 카메라 위치 복원은 애니메이션 완료 후에 실행
+        // (UI가 완전히 사라진 후에 복원하여 위치가 다시 변경되지 않도록)
+
+        Debug.Log($"=== UI 완전 비활성화됨 - 플레이어 위치: {lockedPlayerPosition}, 카메라 위치: {lockedCameraPosition} ===");
+        Debug.Log($"UI 비활성화 후 플레이어 위치: {playerTransform?.position ?? Vector3.zero}");
+        Debug.Log("=== 모든 시스템 즉시 복원 완료 - UI 안전 모드 해제 ===");
 
         if (mainUI != null)
         {
-            // Dotween을 사용한 부드러운 UI 숨김 애니메이션
+            // Dotween을 사용한 부드러운 UI 숨김 애니메이션 (실제 시간 기준으로 동작 - TimeScale 무시)
             CanvasGroup canvasGroup = mainUI.GetComponent<CanvasGroup>();
             if (canvasGroup == null)
             {
                 canvasGroup = mainUI.AddComponent<CanvasGroup>();
             }
 
-            // 애니메이션 시퀀스 생성
+            // 애니메이션 시퀀스 생성 (실제 시간 기준으로 동작 - TimeScale 무시)
             Sequence hideSequence = DOTween.Sequence();
+            hideSequence.SetUpdate(UpdateType.Normal, true); // 실제 시간 기준으로 업데이트
 
-            // 스케일 다운 + 페이드 아웃
+            // 스케일 다운 + 페이드 아웃 (TimeScale 무시)
             hideSequence.Append(mainUI.transform.DOScale(0.8f, 0.2f).SetEase(Ease.InBack));
             hideSequence.Join(canvasGroup.DOFade(0f, 0.2f).SetEase(Ease.InQuad));
 
-            // 애니메이션 완료 후 비활성화
+            // 애니메이션 완료 후 비활성화 및 플레이어 복원
             hideSequence.OnComplete(() => {
                 mainUI.SetActive(false);
                 mainUI.transform.localScale = Vector3.one;
                 canvasGroup.alpha = 1f;
                 isUIAnimating = false; // 애니메이션 완료
-                isUIShowing = false; // UI 숨김 완료
-                Debug.Log("메인 UI가 부드럽게 비활성화되었습니다.");
+
+                // UI가 완전히 사라진 후에 플레이어 위치 복원 실행
+                Debug.Log("=== UI 애니메이션 완전 완료 - 플레이어 위치 복원 시작 ===");
+                RestorePlayerAndCamera();
+                Debug.Log("=== UI 애니메이션 완전 완료 - 플레이어 이동 제한 해제 ===");
             });
 
             hideSequence.Play();
@@ -919,6 +1231,7 @@ public class TowerPlacementSystem : MonoBehaviour
         return GameManager.Instance != null ? GameManager.Instance.CurrentGold : 0;
     }
 
+
     private void OnDestroy()
     {
         // 이벤트 구독 해제
@@ -926,6 +1239,9 @@ public class TowerPlacementSystem : MonoBehaviour
         {
             GameManager.Instance.OnGoldChanged -= UpdateGoldDisplay;
         }
+
+        // 시간 배율 원래대로 복원
+        if (Time.timeScale != 1f) SetSlowMotion(false);
 
         // 싱글톤 정리
         if (Instance == this)

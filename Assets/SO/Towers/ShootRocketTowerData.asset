@@ -21,10 +21,10 @@ MonoBehaviour:
   attackDamage: 200
   attackCooltime: 10
   useStunEffect: 1
-  stunDuration: 5
+  stunDuration: 0.5
   useSlowEffect: 1
-  slowDuration: 10
-  slowSpeedMultiplier: 0.5
+  slowDuration: 2
+  slowSpeedMultiplier: 0.2
   useAreaAttack: 1
   areaAttackRadius: 5
   canUpgrade: 0

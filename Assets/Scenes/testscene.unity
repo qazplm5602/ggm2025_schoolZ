@@ -1182,7 +1182,7 @@ Transform:
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
   m_LocalRotation: {x: 0.123187974, y: -0, z: -0, w: 0.99238336}
-  m_LocalPosition: {x: 0.993, y: 0.40752414, z: -3.8249917}
+  m_LocalPosition: {x: 0.085, y: 0.40752414, z: -1.0309917}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2273,7 +2273,7 @@ GameObject:
   - component: {fileID: 670324173}
   m_Layer: 5
   m_Name: Wave
-  m_TagString: Untagged
+  m_TagString: UI
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -3394,7 +3394,7 @@ GameObject:
   - component: {fileID: 923397650}
   m_Layer: 5
   m_Name: TowerPanel
-  m_TagString: Untagged
+  m_TagString: UI
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -3746,7 +3746,7 @@ Transform:
   m_GameObject: {fileID: 961442138}
   serializedVersion: 2
   m_LocalRotation: {x: 0.12318798, y: 0, z: 0, w: 0.99238336}
-  m_LocalPosition: {x: 0.993, y: 0.40752414, z: -3.8249917}
+  m_LocalPosition: {x: 0.085, y: 0.40752414, z: -1.0309917}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3819,7 +3819,7 @@ Transform:
   m_GameObject: {fileID: 993604448}
   serializedVersion: 2
   m_LocalRotation: {x: 0.123187974, y: -0, z: -0, w: 0.9923834}
-  m_LocalPosition: {x: 0.993, y: 0.053, z: -2.419}
+  m_LocalPosition: {x: 0.085, y: 0.053, z: 0.375}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3915,6 +3915,14 @@ PrefabInstance:
     - target: {fileID: 3562603528270053911, guid: dac719dadcee73247ab7766acd5dfcbf, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5109383202905951171, guid: dac719dadcee73247ab7766acd5dfcbf, type: 3}
+      propertyPath: m_Carve
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6264775885836732766, guid: dac719dadcee73247ab7766acd5dfcbf, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7630945287729654411, guid: dac719dadcee73247ab7766acd5dfcbf, type: 3}
       propertyPath: m_Name
@@ -4072,7 +4080,7 @@ GameObject:
   - component: {fileID: 1005137037}
   m_Layer: 5
   m_Name: Canvas
-  m_TagString: Untagged
+  m_TagString: UI
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -4566,7 +4574,7 @@ GameObject:
   - component: {fileID: 1167432923}
   m_Layer: 5
   m_Name: Warning
-  m_TagString: Untagged
+  m_TagString: UI
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -4585,11 +4593,11 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1005137040}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 1300, y: 700}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_SizeDelta: {x: 500, y: 500}
+  m_Pivot: {x: 0, y: 0}
 --- !u!114 &1167432923
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4644,8 +4652,8 @@ MonoBehaviour:
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 1
-  m_HorizontalAlignment: 2
-  m_VerticalAlignment: 512
+  m_HorizontalAlignment: 1
+  m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_wordSpacing: 0
@@ -4675,7 +4683,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 115.28589, z: 0, w: 51.605316}
+  m_margin: {x: 0, y: -67.02765, z: -193.83203, w: 0.14146423}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -4875,7 +4883,7 @@ GameObject:
   - component: {fileID: 1181038325}
   m_Layer: 5
   m_Name: EnemyCount
-  m_TagString: Untagged
+  m_TagString: UI
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -5270,7 +5278,7 @@ Transform:
   m_GameObject: {fileID: 1271862864}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -3.13, y: 0.73, z: -9.36}
+  m_LocalPosition: {x: -3.13, y: 1.082, z: -9.36}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5437,28 +5445,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b88d5c700b488c64ba16c7e9cec7e2a6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  waves:
-  - {fileID: 11400000, guid: f94eaf1cc5c75fd48858223fae673ae1, type: 2}
-  - {fileID: 11400000, guid: 5fa7600dfa318504aa520521d9d00745, type: 2}
-  - {fileID: 11400000, guid: 43782a58260b73443bda1fa324ae00ed, type: 2}
-  - {fileID: 11400000, guid: 12345678901234567890123456789012, type: 2}
-  - {fileID: 11400000, guid: 12345678901234567890123456789013, type: 2}
-  - {fileID: 11400000, guid: 12345678901234567890123456789014, type: 2}
-  - {fileID: 11400000, guid: 12345678901234567890123456789015, type: 2}
-  - {fileID: 11400000, guid: 12345678901234567890123456789016, type: 2}
-  - {fileID: 11400000, guid: 12345678901234567890123456789017, type: 2}
-  - {fileID: 11400000, guid: 12345678901234567890123456789018, type: 2}
-  - {fileID: 11400000, guid: 5e71b6a40ebbeee43af1bbe263dc61ca, type: 2}
-  - {fileID: 11400000, guid: e022f274f6d34ee429308a14a69443d5, type: 2}
-  - {fileID: 11400000, guid: 3f597c29b00b08d45a15377e378367b5, type: 2}
-  - {fileID: 11400000, guid: 13f5303197c2f9a498083a8041282745, type: 2}
-  - {fileID: 11400000, guid: 08eb6e44384d741499221a583be4f559, type: 2}
-  - {fileID: 11400000, guid: 68f2484e32e222249bba910915bdd953, type: 2}
-  - {fileID: 11400000, guid: 1b049dd066c6ff54c95a16cbca4e8606, type: 2}
-  - {fileID: 11400000, guid: ac40ee9c5673b7e419ccb4f2d8147c80, type: 2}
-  - {fileID: 11400000, guid: d372374e7476f7a43838c6ac36f099ea, type: 2}
-  - {fileID: 11400000, guid: 32fb8deee540f7843a64610ccf8d1a8d, type: 2}
-  - {fileID: 11400000, guid: 533d7d966d9b7614c9d495556efa2c18, type: 2}
   spawnPoints:
   - {fileID: 1271862865}
   defaultEnemyPrefab: {fileID: 2851443508616682418, guid: a6ba84a5029017d4f8ac6d00089c5ec6, type: 3}
@@ -6939,7 +6925,7 @@ GameObject:
   - component: {fileID: 1704827202}
   m_Layer: 5
   m_Name: WaveTime
-  m_TagString: Untagged
+  m_TagString: UI
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -7333,7 +7319,7 @@ GameObject:
   - component: {fileID: 1828008787}
   m_Layer: 5
   m_Name: Gold
-  m_TagString: Untagged
+  m_TagString: UI
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

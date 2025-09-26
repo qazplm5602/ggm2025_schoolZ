@@ -14,21 +14,28 @@ public class CamRotate : MonoBehaviour
 
     void Update()
     {
-        // UI가 활성화되면 카메라 회전을 중지
-        if (TowerPlacementSystem.Instance != null && TowerPlacementSystem.Instance.IsUIActive)
+        // Tab 키 입력 시도 체크 (UI가 열리는 순간 회전 방지)
+        if (UnityEngine.InputSystem.Keyboard.current != null &&
+            UnityEngine.InputSystem.Keyboard.current.tabKey.wasPressedThisFrame)
         {
             return;
         }
 
+        // 마우스 입력 처리
         Vector2 mouseDir = input.GetLookDir() * mouseSensitivity * Time.deltaTime;
 
-        // y축(좌우) 회전: 카메라 자체에서 처리
-        float yRotation = transform.localEulerAngles.y + mouseDir.x;
+        // 마우스 입력이 있으면 회전 적용
+        if (mouseDir.sqrMagnitude > 0.001f)
+        {
+            // X축 회전 (상하 회전) - 누적
+            xRotation -= mouseDir.y;
+            xRotation = Mathf.Clamp(xRotation, -xClamp, xClamp);
 
-        // x축(상하) 회전: Clamp 적용
-        xRotation -= mouseDir.y;
-        xRotation = Mathf.Clamp(xRotation, -xClamp, xClamp);
+            // Y축 회전 (좌우 회전) - 누적
+            float yRotation = transform.localEulerAngles.y + mouseDir.x;
 
-        transform.localEulerAngles = new Vector3(xRotation, yRotation, 0f);
+            // 새로운 로컬 회전 설정
+            transform.localRotation = Quaternion.Euler(xRotation, yRotation, 0f);
+        }
     }
 }

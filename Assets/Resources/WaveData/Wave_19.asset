@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c8b984f9690c894cae75cfff7e58090, type: 3}
+  m_Name: Wave_19
+  m_EditorClassIdentifier: 
+  waveName: Wave 19
+  description: "19\uBC88\uC9F8 \uC6E8\uC774\uBE0C - \uB09C\uC774\uB3C4: \uC5B4\uB824\uC6C0"
+  enemyPrefab: {fileID: 0}
+  enemyCount: 86
+  spawnInterval: 0.01
+  speedMultiplier: 4.99
+  healthMultiplier: 21.435892
+  goldRewardMultiplier: 6.1

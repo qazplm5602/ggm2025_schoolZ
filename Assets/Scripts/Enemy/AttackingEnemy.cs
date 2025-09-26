@@ -17,9 +17,9 @@ public class AttackingEnemy : BaseEnemy
     private Transform currentTarget;
     private float nextAttackTime;
     
-    protected override void Start()
+    private void Start()
     {
-        base.Start();
+        base.Initialize();
         
         // 애니메이터 자동 찾기
         if (enemyAnimator == null)
@@ -28,11 +28,15 @@ public class AttackingEnemy : BaseEnemy
         StartCoroutine(ScanForTargets());
     }
     
-    protected override void Update()
+    private void Update()
     {
-        base.Update();
-
         if (!IsAlive) return;
+
+        // 기본 적 로직 실행
+        UpdateSpecialEffects();
+        Move();
+        CheckNavMeshAgentPath();
+        UpdateHealthBar();
 
         if (currentTarget != null && IsTargetInRange(currentTarget))
         {

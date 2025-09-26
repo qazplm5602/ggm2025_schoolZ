@@ -20,7 +20,7 @@ public class TableCore : MonoBehaviour
             {
                 // Rigidbody가 없으면 자동으로 추가
                 tableRigidbody = gameObject.AddComponent<Rigidbody>();
-                Debug.Log("TableCore: Rigidbody 컴포넌트를 자동으로 추가했습니다.");
+//                Debug.Log("TableCore: Rigidbody 컴포넌트를 자동으로 추가했습니다.");
             }
         }
 
@@ -35,7 +35,6 @@ public class TableCore : MonoBehaviour
     {
         isBeingPushed = true;
         UpdatePhysicsState();
-        Debug.Log("테이블 밀기 시작");
     }
 
     /// <summary>
@@ -46,7 +45,6 @@ public class TableCore : MonoBehaviour
         isBeingPushed = false;
         isPlaced = true;
         UpdatePhysicsState();
-        Debug.Log("테이블 놓기 완료");
     }
 
     /// <summary>

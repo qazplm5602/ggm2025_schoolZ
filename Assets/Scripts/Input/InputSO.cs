@@ -9,20 +9,30 @@ public class InputSO : ScriptableObject, InputSystem_Actions.IPlayerActions
     public event Action<bool> OnJumpChange;
     public event Action OnInteractPress;
 
-    void OnEnable()
+    private void Awake()
+    {
+        InitializeInput();
+    }
+
+    private void OnEnable()
+    {
+        InitializeInput();
+    }
+
+    private void InitializeInput()
     {
         if (input == null)
             input = new();
 
         input.Player.AddCallbacks(this);
         input.Player.Enable();
-
         input.Enable();
     }
 
     void OnDisable()
     {
-        input.Disable();
+        if (input != null)
+            input.Disable();
     }
 
     public Vector2 GetMoveDir()

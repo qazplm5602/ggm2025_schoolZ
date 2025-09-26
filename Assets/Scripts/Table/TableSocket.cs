@@ -5,7 +5,7 @@ public class TableSocket : MonoBehaviour
 {
     [SerializeField] private InputSO input;
     private TableCore currentTable;
-    private Collider[] overlapResult = new Collider[1];
+    private Collider[] overlapResult = new Collider[10]; // 여러 개의 테이블을 감지할 수 있도록 배열 크기 증가
     [SerializeField] private LayerMask detectLayer;
     [SerializeField] private Transform detectPoint;
     [SerializeField] private Vector3 detectSize;
@@ -22,6 +22,13 @@ public class TableSocket : MonoBehaviour
 
     public void AttachNearTable()
     {
+        // UI가 활성화되어 있는 동안은 테이블 연결을 제한 (위치 고정과 충돌 방지)
+        if (TowerPlacementSystem.Instance != null && TowerPlacementSystem.Instance.IsUIActive)
+        {
+            Debug.Log($"UI 활성화 중 - 테이블 연결 제한 (현재 위치: {transform.position})");
+            return;
+        }
+
         // detectPoint가 설정되지 않은 경우 경고 표시
         if (detectPoint == null)
         {
@@ -36,24 +43,68 @@ public class TableSocket : MonoBehaviour
             return;
         }
 
-        Collider tableCol = overlapResult[0];
-        TableCore tableCore = tableCol.GetComponent<TableCore>();
-
-        if (tableCore != null)
+        // 감지된 테이블들 디버그 로그
+        Debug.Log($"총 {count}개의 테이블이 감지되었습니다:");
+        for (int i = 0; i < count; i++)
         {
-            currentTable = tableCore;
-            currentTable.StartPushing();
-            Debug.Log("테이블을 밀기 시작했습니다.");
+            if (overlapResult[i] != null)
+            {
+                float distance = Vector3.Distance(transform.position, overlapResult[i].transform.position);
+                Debug.Log($"  {i+1}. {overlapResult[i].name} (거리: {distance:F2})");
+            }
+        }
+
+        // 여러 개의 테이블이 겹칠 때 가장 가까운(중앙에 있는) 테이블 선택
+        Collider closestTableCol = null;
+        float closestDistance = float.MaxValue;
+
+        for (int i = 0; i < count; i++)
+        {
+            Collider tableCol = overlapResult[i];
+            if (tableCol != null)
+            {
+                float distance = Vector3.Distance(transform.position, tableCol.transform.position);
+                if (distance < closestDistance)
+                {
+                    closestDistance = distance;
+                    closestTableCol = tableCol;
+                }
+            }
+        }
+
+        if (closestTableCol != null)
+        {
+            TableCore tableCore = closestTableCol.GetComponent<TableCore>();
+
+            if (tableCore != null)
+            {
+                currentTable = tableCore;
+                currentTable.StartPushing();
+                Debug.Log($"✅ 테이블을 밀기 시작했습니다! (선택된 테이블: {closestTableCol.name}, 거리: {closestDistance:F2})");
+                Debug.Log($"   - 선택된 테이블 위치: {closestTableCol.transform.position}");
+                Debug.Log($"   - 플레이어 위치: {transform.position}");
+            }
+            else
+            {
+                Debug.LogWarning("❌ 가장 가까운 오브젝트에 TableCore 컴포넌트가 없습니다.");
+            }
         }
         else
         {
-            Debug.LogWarning("발견된 오브젝트에 TableCore 컴포넌트가 없습니다.");
+            Debug.LogWarning("❌ 유효한 테이블을 찾을 수 없습니다.");
         }
     }
 
     void Update()
     {
         if (!currentTable) return;
+
+        // UI가 활성화되어 있는 동안은 테이블 위치 업데이트를 중지 (위치 고정과 충돌 방지)
+        if (TowerPlacementSystem.Instance != null && TowerPlacementSystem.Instance.IsUIActive)
+        {
+            Debug.Log("UI 활성화 중 - 테이블 위치 업데이트 중지");
+            return;
+        }
 
         // 테이블이 밀리고 있는 상태일 때만 위치 업데이트
         if (currentTable.IsBeingPushed)
@@ -63,8 +114,6 @@ public class TableSocket : MonoBehaviour
             // PushSocket이 설정되지 않은 경우 기본 위치 사용
             if (pushSocket == null)
             {
-                Debug.LogWarning("TableSocket: PushSocket이 설정되지 않았습니다. 테이블 중심을 기준으로 계산합니다.");
-                // 플레이어 앞 1미터 위치에 테이블 배치
                 Vector3 tablePos = transform.position + transform.forward * 1f;
                 currentTable.transform.position = tablePos;
                 currentTable.transform.rotation = Quaternion.Euler(0, transform.eulerAngles.y, 0);
@@ -95,6 +144,13 @@ public class TableSocket : MonoBehaviour
 
     private void HandleInteract()
     {
+        // UI가 활성화되어 있는 동안은 테이블 상호작용을 제한 (위치 고정과 충돌 방지)
+        if (TowerPlacementSystem.Instance != null && TowerPlacementSystem.Instance.IsUIActive)
+        {
+            Debug.Log($"UI 활성화 중 - 테이블 상호작용 제한 (현재 테이블: {currentTable?.name ?? "없음"})");
+            return;
+        }
+
         if (currentTable)
         {
             // 테이블이 연결되어 있으면 놓기

@@ -64,6 +64,17 @@ public class MeleeTower : BaseTower
             if (enemy != null)
             {
                 enemy.TakeDamage(AttackDamage);
+
+                // 스턴 효과 적용 (범위 내 모든 적에게)
+                if (towerData.useStunEffect)
+                {
+                    BaseEnemy baseEnemy = collider.GetComponent<BaseEnemy>();
+                    if (baseEnemy != null)
+                    {
+                        baseEnemy.ApplyStun(towerData.stunDuration);
+                    }
+                }
+
                 hitCount++;
             }
         }
@@ -80,6 +91,15 @@ public class MeleeTower : BaseTower
         base.PlayAttackEffects();
 
         // 근접 타워 특유의 이펙트는 PerformAreaAttack에서 개별적으로 처리
+    }
+
+    /// <summary>
+    /// 근접 타워는 범위 공격이므로 개별 타겟 효과 적용을 오버라이드
+    /// </summary>
+    protected override void ApplySpecialEffectsToTarget()
+    {
+        // MeleeTower는 PerformAreaAttack에서 이미 범위 효과를 적용하므로
+        // BaseTower의 개별 타겟 효과 적용을 무시
     }
     
     protected override void OnUpgraded()

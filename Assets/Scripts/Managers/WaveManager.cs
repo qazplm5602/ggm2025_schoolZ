@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using DG.Tweening;
+using System.Linq;
 
 /// <summary>
 /// 웨이브 매니저 - 적 생성 및 웨이브 관리 시스템
@@ -21,13 +22,9 @@ public class WaveManager : MonoBehaviour
     private const float DEFAULT_MESSAGE_DURATION = 2f;
     #endregion
 
-    #region 프라이빗 필드
-    private Coroutine currentMessageCoroutine;
-    #endregion
-
     #region 직렬화된 필드
     [Header("웨이브 설정")]
-    [SerializeField] private WaveData[] waves;
+    private WaveData[] waves; // 런타임에 Resources에서 로드됨
     [SerializeField] private Transform[] spawnPoints;
 
     [Header("기본 적 설정")]
@@ -37,8 +34,6 @@ public class WaveManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI waveText;
     [SerializeField] private TextMeshProUGUI enemyCountText;
     [SerializeField] private TextMeshProUGUI warningText;
-
-    [Header("WaveTime 표시")]
     [SerializeField] private TextMeshProUGUI waveTimeText;
 
     [Header("이벤트")]
@@ -59,8 +54,8 @@ public class WaveManager : MonoBehaviour
     private float nextWaveTimer = 0f;
     private bool isWaitingForNextWave = false;
 
-    // 적 관리 (간단한 카운트 방식)
-    private int currentEnemyCount = 0;  // 현재 살아있는 적 수
+    // 적 관리
+    private int currentEnemyCount = 0; // 현재 살아있는 적 수
     #endregion
 
     #region Unity 생명주기 메소드
@@ -79,17 +74,22 @@ public class WaveManager : MonoBehaviour
 
     private void Start()
     {
-        // 게임 초기화
-        if (waves.Length > 0)
+        // 런타임에서 WaveData 로드
+        LoadWaveDataFromResources();
+
+        // WaveData 배열 검증
+        if (waves == null || waves.Length == 0)
         {
-            StartGameInitialization();
+            Debug.LogError("WaveManager: WaveData를 로드하지 못했습니다!");
+            return;
         }
+
+        // 게임 초기화
+        StartGameInitialization();
     }
 
     private void Update()
     {
-        // 디버깅: 현재 상태 로그 (필요시 활성화)
-
         CheckWaveCompletion();
         UpdateWaveTimer();
         UpdateUI();
@@ -102,48 +102,85 @@ public class WaveManager : MonoBehaviour
     #endregion
 
     #region 초기화 메소드
+    /// <summary>
+    /// 런타임에서 WaveData를 Resources 폴더에서 로드
+    /// </summary>
+    private void LoadWaveDataFromResources()
+    {
+        WaveData[] loadedWaves = Resources.LoadAll<WaveData>("WaveData");
+
+        if (loadedWaves == null || loadedWaves.Length == 0)
+        {
+            Debug.LogError("WaveManager: Resources/WaveData 폴더에서 WaveData 파일을 찾을 수 없습니다!");
+            waves = new WaveData[0];
+            return;
+        }
+
+        // 웨이브 파일들을 숫자 순서대로 정렬
+        waves = loadedWaves.OrderBy(w =>
+        {
+            if (w == null || string.IsNullOrEmpty(w.waveName)) return 0;
+
+            // "Wave 1", "Wave 2", ... 형태에서 숫자 추출
+            string name = w.waveName;
+            if (name.StartsWith("Wave "))
+            {
+                string numberPart = name.Substring(5); // "Wave " 제거
+                if (int.TryParse(numberPart, out int waveNumber))
+                {
+                    return waveNumber;
+                }
+            }
+
+            // 파싱 실패시 문자열 그대로 사용
+            return 0;
+        }).ToArray();
+
+        // 로드 결과 확인
+        Debug.Log($"WaveManager: {waves.Length}개의 WaveData 로드 및 정렬됨");
+        for (int i = 0; i < Mathf.Min(waves.Length, 5); i++) // 처음 5개만 로그
+        {
+            if (waves[i] != null)
+            {
+                Debug.Log($"  [{i}] {waves[i].waveName} (적 수: {waves[i].enemyCount})");
+            }
+        }
+        if (waves.Length > 5)
+        {
+            Debug.Log($"  ... 그리고 {waves.Length - 5}개 더");
+        }
+    }
 
     /// <summary>
     /// 게임 초기화 시작
     /// </summary>
     private void StartGameInitialization()
     {
-        // 첫 번째 웨이브 정보 표시
-        ShowWarningMessage("게임 시작! 첫 번째 웨이브 준비 중...\n[SPACE] 즉시 시작", 3f);
+        // 웨이브 인덱스 초기화 확인
+        currentWaveIndex = 0;
+        Debug.Log($"게임 초기화: currentWaveIndex = {currentWaveIndex}, 총 웨이브 수 = {waves.Length}");
 
-        // 5초 후 조작법 안내 표시
-        Invoke("ShowControlTutorial", 5f);
-
-        // 10초 후 웨이브 카운트다운 시작 (모든 메시지 표시가 끝난 후)
-        StartWaveCountdown(10f);
+        ShowControlTutorial();
+        StartWaveCountdown(15f); // 15초 후 웨이브 시작
     }
 
     /// <summary>
-    /// 조작법 튜토리얼 표시 (기존 메시지를 즉시 교체)
+    /// 조작법 튜토리얼 표시
     /// </summary>
     private void ShowControlTutorial()
     {
         string controlKeysMessage = "조작법 안내:\n" +
-                                   "TAB - 타워 생성 및 업그레이드\n" +
-                                   "E - 책상 이동\n" +
+                                   "esc 눌러서 멈춘 뒤 읽으세용\n" +
+                                   "TAB - 타워 생성 및 업그레이드, 책상 옆에서 누르세요\n" +
+                                   "E - 책상 이동, 책상 옆에서 누르세요\n" +
                                    "화살표키 - 이동\n" +
                                    "SPACE - 웨이브 바로 시작";
 
-        ShowWarningMessage(controlKeysMessage, 5f);
+        ShowWarningMessage(controlKeysMessage, 9f);
     }
-
-
     #endregion
 
     #region 업데이트 관련 메소드
-    /// <summary>
-    /// 적 카운트 초기화 (새로운 웨이브 시작 시)
-    /// </summary>
-    private void ResetEnemyCount()
-    {
-        currentEnemyCount = 0;
-    }
-
     /// <summary>
     /// 웨이브 완료 조건 확인
     /// </summary>
@@ -177,11 +214,9 @@ public class WaveManager : MonoBehaviour
             // 타이머 만료 확인
             if (nextWaveTimer <= 0f)
             {
-                nextWaveTimer = 0f; // 음수 방지
-                // 타이머 만료 시 상태 설정 (명확하게)
+                nextWaveTimer = 0f;
                 isWaitingForNextWave = false;
                 isWaveReady = true;
-
                 StartNextWave();
             }
         }
@@ -193,56 +228,10 @@ public class WaveManager : MonoBehaviour
     private void StartWaveCountdown(float duration)
     {
         isWaitingForNextWave = true;
-        nextWaveTimer = Mathf.Max(0f, duration); // 음수 방지
+        nextWaveTimer = Mathf.Max(0f, duration);
         Debug.Log($"⏰ 웨이브 카운트다운 시작: {nextWaveTimer}초");
     }
     #endregion
-
-    #region 경고 메시지 시스템
-    /// <summary>
-    /// 간단한 경고 메시지 표시
-    /// </summary>
-    public void ShowWarningMessage(string message, float duration = DEFAULT_MESSAGE_DURATION)
-    {
-        if (warningText == null)
-        {
-            warningText = FindFirstObjectByType<TextMeshProUGUI>();
-            if (warningText == null)
-            {
-                Debug.LogError("WarningText를 찾을 수 없습니다.");
-                return;
-            }
-        }
-
-        // 이전 메시지 코루틴 중지
-        if (currentMessageCoroutine != null)
-        {
-            StopCoroutine(currentMessageCoroutine);
-        }
-
-        // 메시지 표시 (덮어쓰기)
-        warningText.text = message;
-        warningText.gameObject.SetActive(true);
-
-        // 지정된 시간 후 숨기기
-        currentMessageCoroutine = StartCoroutine(HideMessageAfterDelay(duration));
-    }
-
-    /// <summary>
-    /// 지정된 시간 후 메시지 숨기기
-    /// </summary>
-    private IEnumerator HideMessageAfterDelay(float delay)
-    {
-        yield return new WaitForSeconds(delay);
-
-        if (warningText != null)
-        {
-            warningText.gameObject.SetActive(false);
-        }
-    }
-
-
-
 
     #region 웨이브 관리 메소드
     /// <summary>
@@ -250,37 +239,26 @@ public class WaveManager : MonoBehaviour
     /// </summary>
     public void StartWave(int waveIndex)
     {
-        if (!IsValidWaveIndex(waveIndex))
-        {
-            return;
-        }
-
-        ShowWaveStartMessage(waveIndex);
-
-        // 사전 검증
-        ValidateWaveStartRequirements();
-
-        // 웨이브 상태 초기화
-        InitializeWaveState(waveIndex);
-
-        // 이벤트 및 UI 업데이트
-        NotifyWaveStart();
-
-        // 적 생성 시작
-        StartEnemySpawning(waveIndex);
-    }
-
-    /// <summary>
-    /// 웨이브 인덱스 유효성 검증
-    /// </summary>
-    private bool IsValidWaveIndex(int waveIndex)
-    {
         if (waveIndex >= waves.Length)
         {
             Debug.LogError($"웨이브 시작 실패: 유효하지 않은 웨이브 인덱스 {waveIndex} (총 {waves.Length}개 웨이브)");
-            return false;
+            return;
         }
-        return true;
+
+        Debug.Log($"=== 웨이브 {waveIndex + 1} 시작 ===");
+        if (waves[waveIndex] != null)
+        {
+            Debug.Log($"웨이브 데이터: {waves[waveIndex].waveName}, 적 수: {waves[waveIndex].enemyCount}");
+        }
+        else
+        {
+            Debug.LogError($"waves[{waveIndex}]가 null입니다!");
+        }
+
+        ShowWaveStartMessage(waveIndex);
+        InitializeWaveState(waveIndex);
+        NotifyWaveStart();
+        StartEnemySpawning(waveIndex);
     }
 
     /// <summary>
@@ -290,23 +268,6 @@ public class WaveManager : MonoBehaviour
     {
         string waveStartMessage = $"웨이브 {waveIndex + 1} 시작!";
         ShowWarningMessage(waveStartMessage, DEFAULT_MESSAGE_DURATION);
-    }
-
-    /// <summary>
-    /// 웨이브 시작 요구사항 검증
-    /// </summary>
-    private void ValidateWaveStartRequirements()
-    {
-        if (defaultEnemyPrefab == null)
-        {
-            Debug.LogWarning("기본 적 프리팹이 설정되지 않았습니다.");
-        }
-
-        if (!AreAllSpawnPointsValid())
-        {
-            Debug.LogWarning("경로 검증 실패: 스폰 포인트에서 플레이어까지의 경로가 유효하지 않습니다.");
-            ShowWarningMessage("경로 오류 감지! NavMesh를 확인하세요.", 4f);
-        }
     }
 
     /// <summary>
@@ -321,8 +282,6 @@ public class WaveManager : MonoBehaviour
         isWaveReady = false;
         enemiesRemainingInWave = currentWave.enemyCount;
         totalEnemiesSpawned = 0;
-
-        // 적 카운트 초기화
         ResetEnemyCount();
     }
 
@@ -359,7 +318,14 @@ public class WaveManager : MonoBehaviour
     {
         if (!isWaveReady || isWaveActive || isWaitingForNextWave || currentWaveIndex >= waves.Length)
         {
+            Debug.Log($"StartNextWave 실패: isWaveReady={isWaveReady}, isWaveActive={isWaveActive}, isWaitingForNextWave={isWaitingForNextWave}, currentWaveIndex={currentWaveIndex}, waves.Length={waves.Length}");
             return;
+        }
+
+        Debug.Log($"웨이브 {currentWaveIndex + 1} 시작 시도 (총 {waves.Length}개 웨이브 중)");
+        if (waves.Length > currentWaveIndex && waves[currentWaveIndex] != null)
+        {
+            Debug.Log($"시작할 웨이브: {waves[currentWaveIndex].waveName}");
         }
 
         isWaveReady = false;
@@ -376,9 +342,6 @@ public class WaveManager : MonoBehaviour
 
         while (spawnedCount < wave.enemyCount)
         {
-            // 동시 적 수 제한 제거됨 - spawnInterval마다 적 생성
-
-            // 스폰 포인트 선택 - 기본적으로 랜덤 스폰 사용
             Transform spawnPoint;
             if (spawnPoints.Length > 0)
             {
@@ -390,7 +353,6 @@ public class WaveManager : MonoBehaviour
                 yield break;
             }
 
-            // 적 프리팹 결정 (WaveData 우선, 없으면 기본 프리팹 사용)
             GameObject enemyPrefab = wave.enemyPrefab != null ? wave.enemyPrefab : defaultEnemyPrefab;
 
             if (enemyPrefab == null)
@@ -400,14 +362,10 @@ public class WaveManager : MonoBehaviour
                 yield break;
             }
 
-            // 적 생성
-            GameObject enemy = Instantiate(enemyPrefab, spawnPoint.position, spawnPoint.rotation);
+            Vector3 spawnPosition = FindValidSpawnPosition(spawnPoint.position);
+            GameObject enemy = Instantiate(enemyPrefab, spawnPosition, spawnPoint.rotation);
 
-            // 적 카운트 증가 (싱글톤 방식)
-            currentEnemyCount++;
-
-
-            // 적 속성 적용 (특별 효과)
+            // 적 속성 적용
             BaseEnemy enemyComponent = enemy.GetComponent<BaseEnemy>();
             if (enemyComponent != null)
             {
@@ -417,27 +375,25 @@ public class WaveManager : MonoBehaviour
                     enemyComponent.ApplySpeedMultiplier(wave.speedMultiplier);
             }
 
-            // 적 레이어 설정
+            // 레이어 설정
             int enemyLayer = LayerMask.NameToLayer("Enemy");
             if (enemyLayer != -1)
                 enemy.layer = enemyLayer;
 
+            currentEnemyCount++;
             totalEnemiesSpawned++;
             spawnedCount++;
             enemiesRemainingInWave--;
 
-
-            // 다음 적 생성까지 대기
             yield return new WaitForSeconds(wave.spawnInterval);
         }
 
-        // 모든 적이 사망할 때까지 대기
+        // 모든 적이 생성될 때까지 대기
         while (currentEnemyCount > 0)
         {
             yield return new WaitForSeconds(0.5f);
         }
     }
-
 
     /// <summary>
     /// 현재 웨이브 종료 처리
@@ -492,11 +448,18 @@ public class WaveManager : MonoBehaviour
     }
 
     /// <summary>
+    /// 적 카운트 초기화
+    /// </summary>
+    private void ResetEnemyCount()
+    {
+        currentEnemyCount = 0;
+    }
+
+    /// <summary>
     /// WaveManager 상태 완전 리셋
     /// </summary>
     public void ResetWaveManager()
     {
-        // 웨이브 상태 초기화
         currentWaveIndex = 0;
         isWaveActive = false;
         isWaveReady = false;
@@ -506,15 +469,12 @@ public class WaveManager : MonoBehaviour
         nextWaveTimer = 0f;
         enemiesRemainingInWave = 0;
 
-        // UI 초기화
         UpdateUI();
 
-        // 웨이브 카운트다운 초기화
         if (waves.Length > 0)
         {
             StartWaveCountdown(DEFAULT_WAVE_INTERVAL);
         }
-
     }
 
     /// <summary>
@@ -541,7 +501,6 @@ public class WaveManager : MonoBehaviour
         {
             if (isWaveActive)
             {
-                // 간단한 카운트 방식으로 적 수 표시
                 enemyCountText.text = $"남은 적: {currentEnemyCount}";
             }
             else if (isWaitingForNextWave)
@@ -562,17 +521,14 @@ public class WaveManager : MonoBehaviour
             Debug.LogWarning("enemyCountText가 설정되지 않았습니다. WaveManager의 Inspector에서 연결해주세요.");
         }
 
-        // WaveTime 텍스트 업데이트
         if (waveTimeText != null)
         {
             if (isWaveActive)
             {
-                // 현재 웨이브의 진행 시간 표시
                 waveTimeText.text = $"웨이브 진행 중";
             }
             else if (isWaitingForNextWave)
             {
-                // 타이머가 0초 이하가 되지 않도록 최대값 0으로 제한
                 int displayTime = Mathf.Max(0, Mathf.CeilToInt(nextWaveTimer));
                 waveTimeText.text = $"다음 웨이브까지: {displayTime}초";
             }
@@ -590,11 +546,9 @@ public class WaveManager : MonoBehaviour
             Debug.LogWarning("waveTimeText가 설정되지 않았습니다. WaveManager의 Inspector에서 연결해주세요.");
         }
 
-        // 경고 텍스트 관리 - 웨이브 진행 중에는 숨김 (단, 게임 오버 중에는 표시 유지)
-        // 초기화 단계에서는 메시지를 유지 (currentWaveIndex가 0일 때)
+        // 경고 텍스트 관리
         if (warningText != null && isWaveActive && currentWaveIndex > 0)
         {
-            // 게임 오버 중에는 메시지를 숨기지 않음
             if (GameManager.Instance != null && !GameManager.Instance.IsGameOver())
             {
                 warningText.gameObject.SetActive(false);
@@ -602,17 +556,14 @@ public class WaveManager : MonoBehaviour
         }
     }
 
-
     public void OnEnemyDeath(GameObject enemy)
     {
-        // enemy가 null이거나 파괴되었는지 확인
         if (enemy == null)
         {
             Debug.LogError("OnEnemyDeath: enemy가 null입니다!");
             return;
         }
 
-        // 적 카운트 감소 (싱글톤 방식)
         if (currentEnemyCount > 0)
         {
             currentEnemyCount--;
@@ -620,16 +571,11 @@ public class WaveManager : MonoBehaviour
             BaseEnemy enemyComponent = enemy.GetComponent<BaseEnemy>();
             if (enemyComponent != null)
             {
-                // 적 사망 시 즉시 골드 보상 지급
                 int goldReward = GetGoldRewardForEnemy(enemy);
                 GameManager.Instance?.AddGold(goldReward);
                 Debug.Log($"적 사망: {enemy.name} (+{goldReward}G)");
             }
-            else
-            {
-            }
 
-            // 적 사망 시 UI 즉시 업데이트
             UpdateUI();
         }
         else
@@ -642,13 +588,10 @@ public class WaveManager : MonoBehaviour
     {
         int baseGold = GetBaseGoldForEnemy(enemy);
 
-        if (currentWaveIndex >= 0 && currentWaveIndex < waves.Length)
+        if (currentWaveIndex >= 0 && currentWaveIndex < waves.Length && waves[currentWaveIndex] != null)
         {
             WaveData currentWave = waves[currentWaveIndex];
-            if (currentWave != null)
-            {
-                baseGold = Mathf.RoundToInt(baseGold * currentWave.goldRewardMultiplier);
-            }
+            baseGold = Mathf.RoundToInt(baseGold * currentWave.goldRewardMultiplier);
         }
 
         return baseGold;
@@ -660,31 +603,70 @@ public class WaveManager : MonoBehaviour
 
         if (enemyName.Contains("basic"))
         {
-            return 20; // 기본 적 (2배 증가)
+            return 20;
         }
         else if (enemyName.Contains("attacking"))
         {
-            return 30; // 공격형 적 (2배 증가)
+            return 30;
         }
         else if (enemyName.Contains("zombie"))
         {
-            return 40; // 좀비 등 특별한 적 (2배 증가)
+            return 40;
         }
         else if (enemyName.Contains("boss"))
         {
-            return 100; // 보스 적 (2배 증가)
+            return 100;
         }
 
-        return 20; // 기본 보상 (2배 증가)
+        return 20; // 기본 보상
     }
 
+    /// <summary>
+    /// NavMesh 위의 유효한 스폰 위치를 찾습니다
+    /// </summary>
+    private Vector3 FindValidSpawnPosition(Vector3 desiredPosition)
+    {
+        // 1. 원하는 위치가 NavMesh 위인지 먼저 확인
+        if (NavMesh.SamplePosition(desiredPosition, out NavMeshHit hit, 1.0f, NavMesh.AllAreas))
+        {
+            return hit.position;
+        }
+
+        // 2. NavMesh 위가 아니라면 주변을 검색
+        float searchRadius = 2.0f;
+        float stepSize = 0.5f;
+
+        for (float radius = stepSize; radius <= searchRadius; radius += stepSize)
+        {
+            int pointsPerCircle = Mathf.CeilToInt(radius * 2 * Mathf.PI / stepSize);
+
+            for (int i = 0; i < pointsPerCircle; i++)
+            {
+                float angle = (2 * Mathf.PI * i) / pointsPerCircle;
+                Vector3 checkPosition = desiredPosition + new Vector3(
+                    Mathf.Cos(angle) * radius,
+                    0,
+                    Mathf.Sin(angle) * radius
+                );
+
+                if (NavMesh.SamplePosition(checkPosition, out hit, 1.0f, NavMesh.AllAreas))
+                {
+                    Debug.Log($"[{gameObject.name}] 스폰 위치 조정: {desiredPosition:F1} → {hit.position:F1} (반경: {radius:F1}m)");
+                    return hit.position;
+                }
+            }
+        }
+
+        // 3. 그래도 찾지 못하면 원래 위치 반환
+        Debug.LogWarning($"[{gameObject.name}] 유효한 NavMesh 스폰 위치를 찾을 수 없습니다! 원래 위치 사용: {desiredPosition:F1}");
+        return desiredPosition;
+    }
 
     /// <summary>
     /// 모든 스폰 포인트에서 플레이어까지의 경로가 유효한지 확인
     /// </summary>
     private bool AreAllSpawnPointsValid()
     {
-        // 플레이어 찾기
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj == null)
         {
@@ -694,14 +676,12 @@ public class WaveManager : MonoBehaviour
 
         Transform playerTransform = playerObj.transform;
 
-        // 스폰 포인트가 설정되어 있는지 확인
         if (spawnPoints == null || spawnPoints.Length == 0)
         {
             Debug.LogError("스폰 포인트가 설정되지 않았습니다! WaveManager의 Spawn Points에 스폰 포인트를 추가하세요.");
             return false;
         }
 
-        // NavMesh가 존재하는지 기본 확인
         if (!NavMesh.SamplePosition(playerTransform.position, out NavMeshHit playerHit, 1.0f, NavMesh.AllAreas))
         {
             Debug.LogError("플레이어 위치에 NavMesh가 존재하지 않습니다!");
@@ -709,7 +689,6 @@ public class WaveManager : MonoBehaviour
             return false;
         }
 
-        // 각 스폰 포인트에서 플레이어까지의 기본 경로 확인
         for (int i = 0; i < spawnPoints.Length; i++)
         {
             Transform spawnPoint = spawnPoints[i];
@@ -719,7 +698,6 @@ public class WaveManager : MonoBehaviour
                 return false;
             }
 
-            // 기본적인 NavMesh 샘플링으로 확인
             if (!NavMesh.SamplePosition(spawnPoint.position, out NavMeshHit hit, 1.0f, NavMesh.AllAreas))
             {
                 Debug.LogError($"스폰 포인트 {i} ({spawnPoint.name})가 NavMesh 위에 없습니다!");
@@ -759,42 +737,41 @@ public class WaveManager : MonoBehaviour
     /// </summary>
     public int GetRemainingWaves()
     {
+        if (waves == null) return 0;
         return waves.Length - currentWaveIndex;
     }
-}
-#endregion
 
-/// <summary>
-/// 웨이브 데이터 ScriptableObject
-/// </summary>
-[CreateAssetMenu(fileName = "WaveData", menuName = "Tower Defense/Wave Data", order = 1)]
-public class WaveData : ScriptableObject
-{
-    [Header("웨이브 기본 정보")]
-    public string waveName = "웨이브";
-    public string description = "웨이브 설명";
-
-    [Header("적 생성 설정")]
-    [Tooltip("적 프리팹 (설정하지 않으면 WaveManager의 기본 프리팹 사용)")]
-    public GameObject enemyPrefab; // 적 프리팹 (선택적)
-    public int enemyCount = 10; // 생성할 적 수
-    public float spawnInterval = 1f; // 생성 간격 (초)
-
-    [Header("적 배치 설정")]
-    // useRandomSpawn과 maxEnemiesAtOnce는 제거됨 - 기본값 사용
-
-    [Header("특별 효과")]
-    public float speedMultiplier = 1f; // 적 속도 배율
-    public float healthMultiplier = 1f; // 적 체력 배율
-    public float goldRewardMultiplier = 1f; // 골드 보상 배율
-
-    public float GetTotalDuration()
+    public void ShowWarningMessage(string message, float duration = DEFAULT_MESSAGE_DURATION)
     {
-        return enemyCount * spawnInterval;
+        if (warningText == null)
+        {
+            warningText = FindFirstObjectByType<TextMeshProUGUI>();
+            if (warningText == null)
+            {
+                Debug.LogError("WarningText를 찾을 수 없습니다.");
+                return;
+            }
+        }
+
+        if (currentMessageCoroutine != null)
+        {
+            StopCoroutine(currentMessageCoroutine);
+        }
+
+        warningText.text = message;
+        warningText.gameObject.SetActive(true);
+        currentMessageCoroutine = StartCoroutine(HideMessageAfterDelay(duration));
     }
 
-    public string GetWaveSummary()
+    private IEnumerator HideMessageAfterDelay(float delay)
     {
-        return $"{waveName}: {enemyCount}마리, {spawnInterval}초 간격, 총 {GetTotalDuration():F1}초";
+        yield return new WaitForSeconds(delay);
+
+        if (warningText != null)
+        {
+            warningText.gameObject.SetActive(false);
+        }
     }
+
+    private Coroutine currentMessageCoroutine;
 }
