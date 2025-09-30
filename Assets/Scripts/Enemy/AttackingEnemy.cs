@@ -1,11 +1,11 @@
 using UnityEngine;
 using System.Collections;
 
-public class AttackingEnemy : BaseEnemy
+public class AttackingEnemy : BasicEnemy
 {
     [Header("Attack Settings")]
     [SerializeField] private float attackRange = 2f;
-    [SerializeField] private float attackSpeed = 1f; // 초당 공격 횟수
+    [SerializeField] private float attackSpeed = 1f;
     [SerializeField] private LayerMask towerLayer = -1;
     
     [Header("Attack Effects")]
@@ -17,54 +17,54 @@ public class AttackingEnemy : BaseEnemy
     private Transform currentTarget;
     private float nextAttackTime;
     
-    private void Start()
+    public override void Initialize()
     {
         base.Initialize();
         
-        // 애니메이터 자동 찾기
         if (enemyAnimator == null)
             enemyAnimator = GetComponent<Animator>();
             
         StartCoroutine(ScanForTargets());
     }
-    
+
     private void Update()
     {
         if (!IsAlive) return;
 
-        // 기본 적 로직 실행
         UpdateSpecialEffects();
-        Move();
-        CheckNavMeshAgentPath();
-        UpdateHealthBar();
-
+        
         if (currentTarget != null && IsTargetInRange(currentTarget))
         {
-            // 공격 범위 내에 타겟이 있으면 공격
             if (agentMovement != null)
             {
-                agentMovement.StopMovement(); // 공격 중 이동 정지
+                agentMovement.StopMovement();
             }
             AttackTarget();
         }
         else
         {
-            // 타겟이 없거나 범위를 벗어나면 이동
             currentTarget = null;
             if (agentMovement != null)
             {
-                agentMovement.ResumeMovement(); // 이동 재개
+                agentMovement.ResumeMovement();
             }
+            Move();
         }
+
+        if (Time.time - lastPathCheckTime >= PATH_CHECK_INTERVAL)
+        {
+            CheckNavMeshAgentPath();
+            lastPathCheckTime = Time.time;
+        }
+
+        UpdateHealthBar();
     }
-    
-    // 이동은 AgentMovement에서 처리됨
     
     private IEnumerator ScanForTargets()
     {
         while (IsAlive)
         {
-            yield return new WaitForSeconds(0.3f); // 0.3초마다 스캔
+            yield return new WaitForSeconds(0.3f);
             
             if (currentTarget == null)
             {
@@ -82,7 +82,6 @@ public class AttackingEnemy : BaseEnemy
         
         foreach (Collider tower in towersInRange)
         {
-            // BaseTower 컴포넌트가 있는지 확인
             if (tower.GetComponent<BaseTower>() != null)
             {
                 float distance = Vector3.Distance(transform.position, tower.transform.position);
@@ -108,16 +107,14 @@ public class AttackingEnemy : BaseEnemy
     {
         if (currentTarget == null) return;
         
-        // 타겟 방향으로 회전
         Vector3 direction = (currentTarget.position - transform.position).normalized;
-        direction.y = 0; // 수평 회전만
+        direction.y = 0;
         
         if (direction != Vector3.zero)
         {
             transform.rotation = Quaternion.LookRotation(direction);
         }
         
-        // 공격 쿨다운 체크
         if (Time.time >= nextAttackTime)
         {
             PerformAttack();
@@ -129,13 +126,11 @@ public class AttackingEnemy : BaseEnemy
     {
         if (currentTarget == null) return;
         
-        // 애니메이션 재생
         if (enemyAnimator != null && !string.IsNullOrEmpty(attackAnimationName))
         {
             enemyAnimator.SetTrigger(attackAnimationName);
         }
         
-        // 공격 이펙트 재생
         if (attackParticle != null)
             attackParticle.Play();
             
@@ -145,11 +140,9 @@ public class AttackingEnemy : BaseEnemy
             Instantiate(attackEffect, effectPos, Quaternion.identity);
         }
         
-        // 타워에게 데미지 적용 (TowerPlacementZone을 통해 처리)
         TowerPlacementZone zone = currentTarget.GetComponentInParent<TowerPlacementZone>();
         if (zone != null)
         {
-            // 존에 타워가 있다면 데미지 적용
             BaseTower tower = zone.GetPlacedTower();
             if (tower != null)
             {
@@ -157,32 +150,25 @@ public class AttackingEnemy : BaseEnemy
                 // tower.TakeDamage(damage);
             }
         }
-        
     }
     
     protected override void OnTakeDamage(float damage)
     {
         base.OnTakeDamage(damage);
-
-        // 데미지를 받으면 잠시 공격을 멈추고 이동 (옵션)
-        // currentTarget = null;
+        // 추가 로직이 필요하면 여기에
     }
     
     protected override void OnDie()
     {
         base.OnDie();
-        
-        // 죽을 때 추가 효과
         StopAllCoroutines();
     }
     
     private void OnDrawGizmosSelected()
     {
-        // 공격 범위 시각화
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, attackRange);
         
-        // 현재 타겟 표시
         if (currentTarget != null)
         {
             Gizmos.color = Color.yellow;

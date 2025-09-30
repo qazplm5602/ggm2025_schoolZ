@@ -106,7 +106,7 @@ public class Player : Agent
         }
 
         // 컴포넌트 확인
-        if (obj.GetComponent<BaseEnemy>() != null)
+        if (obj.GetComponent<BasicEnemy>() != null)
         {
             return true;
         }

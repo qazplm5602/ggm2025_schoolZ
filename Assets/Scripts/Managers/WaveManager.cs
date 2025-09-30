@@ -366,7 +366,7 @@ public class WaveManager : MonoBehaviour
             GameObject enemy = Instantiate(enemyPrefab, spawnPosition, spawnPoint.rotation);
 
             // 적 속성 적용
-            BaseEnemy enemyComponent = enemy.GetComponent<BaseEnemy>();
+            BasicEnemy enemyComponent = enemy.GetComponent<BasicEnemy>();
             if (enemyComponent != null)
             {
                 if (wave.healthMultiplier != 1f)
@@ -568,7 +568,7 @@ public class WaveManager : MonoBehaviour
         {
             currentEnemyCount--;
 
-            BaseEnemy enemyComponent = enemy.GetComponent<BaseEnemy>();
+            BasicEnemy enemyComponent = enemy.GetComponent<BasicEnemy>();
             if (enemyComponent != null)
             {
                 int goldReward = GetGoldRewardForEnemy(enemy);

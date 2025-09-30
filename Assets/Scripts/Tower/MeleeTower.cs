@@ -14,7 +14,7 @@ public class MeleeTower : BaseTower
 
         foreach (Collider enemy in enemiesInRange)
         {
-            if (enemy.GetComponent<IEnemy>() != null)
+            if (enemy.GetComponent<BasicEnemy>() != null)
             {
                 float distance = Vector3.Distance(transform.position, enemy.transform.position);
                 if (distance < nearestDistance)
@@ -57,15 +57,14 @@ public class MeleeTower : BaseTower
         int hitCount = 0;
         foreach (Collider collider in enemiesInRange)
         {
-            IEnemy enemy = collider.GetComponent<IEnemy>();
+            BasicEnemy enemy = collider.GetComponent<BasicEnemy>();
             if (enemy != null)
             {
                 enemy.TakeDamage(AttackDamage);
 
-                // 스턴 효과 적용 (범위 내 모든 적에게)
                 if (towerData.useStunEffect)
                 {
-                    BaseEnemy baseEnemy = collider.GetComponent<BaseEnemy>();
+                    BasicEnemy baseEnemy = collider.GetComponent<BasicEnemy>();
                     if (baseEnemy != null)
                     {
                         baseEnemy.ApplyStun(towerData.stunDuration);

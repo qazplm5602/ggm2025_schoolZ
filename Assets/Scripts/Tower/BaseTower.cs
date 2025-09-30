@@ -157,7 +157,7 @@ public abstract class BaseTower : MonoBehaviour
         List<Transform> validEnemies = new List<Transform>();
         foreach (Collider enemy in enemiesInRange)
         {
-            IEnemy enemyComponent = enemy.GetComponent<IEnemy>();
+            BasicEnemy enemyComponent = enemy.GetComponent<BasicEnemy>();
             if (enemyComponent != null)
             {
                 validEnemies.Add(enemy.transform);
@@ -229,7 +229,7 @@ public abstract class BaseTower : MonoBehaviour
     {
         if (currentTarget == null || towerData == null) return;
 
-        BaseEnemy enemy = currentTarget.GetComponent<BaseEnemy>();
+        BasicEnemy enemy = currentTarget.GetComponent<BasicEnemy>();
         if (enemy == null) return;
 
         if (towerData.useStunEffect)
@@ -261,6 +261,11 @@ public abstract class BaseTower : MonoBehaviour
 
         DrawAttackRange();
         DrawCurrentTarget();
+        DrawTowerSpecificGizmos();
+    }
+
+    protected virtual void DrawTowerSpecificGizmos()
+    {
     }
 
     protected virtual void DrawAttackRange()

@@ -15,15 +15,14 @@ public class RangedTower : BaseTower
         // 공격 시점에 다시 한 번 범위 확인 (안전장치)
         if (!IsTargetInRange(currentTarget))
         {
-            currentTarget = null; // 타겟 리셋
+            currentTarget = null;
             return;
         }
 
-        // 타겟이 여전히 유효한지 확인
-        IEnemy enemyComponent = currentTarget.GetComponent<IEnemy>();
+        BasicEnemy enemyComponent = currentTarget.GetComponent<BasicEnemy>();
         if (enemyComponent == null)
         {
-            currentTarget = null; // 타겟 리셋
+            currentTarget = null;
             return;
         }
 
@@ -52,12 +51,9 @@ public class RangedTower : BaseTower
         }
     }
 
-    /// <summary>
-    /// 단일 타겟 공격
-    /// </summary>
     private void PerformSingleTargetAttack()
     {
-        IEnemy enemy = currentTarget.GetComponent<IEnemy>();
+        BasicEnemy enemy = currentTarget.GetComponent<BasicEnemy>();
         if (enemy != null)
         {
             enemy.TakeDamage(AttackDamage);
@@ -82,15 +78,14 @@ public class RangedTower : BaseTower
 
         foreach (Collider collider in enemiesInRange)
         {
-            IEnemy enemy = collider.GetComponent<IEnemy>();
+            BasicEnemy enemy = collider.GetComponent<BasicEnemy>();
             if (enemy != null)
             {
                 enemy.TakeDamage(AttackDamage);
 
-                // 스턴 효과 적용 (범위 내 모든 적에게)
                 if (towerData.useStunEffect)
                 {
-                    BaseEnemy baseEnemy = collider.GetComponent<BaseEnemy>();
+                    BasicEnemy baseEnemy = collider.GetComponent<BasicEnemy>();
                     if (baseEnemy != null)
                     {
                         baseEnemy.ApplyStun(towerData.stunDuration);
