@@ -3,9 +3,6 @@ using System.Collections.Generic;
 
 public class MeleeTower : BaseTower
 {
-    // Melee Tower - 범위 공격 특화
-    
-
 
     protected override void FindTarget()
     {
@@ -80,46 +77,18 @@ public class MeleeTower : BaseTower
         }
 
     }
+    
 
-
-    /// <summary>
-    /// 근접 타워 전용 공격 이펙트 재생 (BaseTower의 PlayAttackEffects 오버라이드)
-    /// </summary>
-    protected override void PlayAttackEffects()
-    {
-        // 기본 이펙트 재생 (머즐 플래시)
-        base.PlayAttackEffects();
-
-        // 근접 타워 특유의 이펙트는 PerformAreaAttack에서 개별적으로 처리
-    }
-
-    /// <summary>
-    /// 근접 타워는 범위 공격이므로 개별 타겟 효과 적용을 오버라이드
-    /// </summary>
     protected override void ApplySpecialEffectsToTarget()
     {
-        // MeleeTower는 PerformAreaAttack에서 이미 범위 효과를 적용하므로
-        // BaseTower의 개별 타겟 효과 적용을 무시
     }
     
-    protected override void OnUpgraded()
-    {
-        base.OnUpgraded();
-        // ApplyTowerData()가 자동으로 호출되므로 별도 처리 불필요
-    }
-    
-    /// <summary>
-    /// 근접 타워 특화 시각화
-    /// </summary>
     protected override void DrawTowerSpecificGizmos()
     {
         // 근접 타워의 고유 시각화
         DrawMeleeVisualization();
     }
 
-    /// <summary>
-    /// 근접 타워 시각화 (타워 중심 범위 공격)
-    /// </summary>
     private void DrawMeleeVisualization()
     {
         if (currentTarget == null) return;

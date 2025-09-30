@@ -16,6 +16,14 @@ public class PlayerMovement : AgentMovement
     private float groundLevel = 0f; // 지상 레벨 추적
     private Vector3 previousPosition; // 이전 프레임 위치 추적
 
+    // ForceSyncCharacterController 타이머 관련 변수들
+    private float lastSyncTime = 0f;
+    private const float SYNC_INTERVAL = 3f; // 3초마다 동기화
+
+    // 회전 값 유지 관련 변수들
+    private Quaternion savedRotation;
+    private bool rotationNeedsRestore = false;
+
     public override void InitAgent(Agent agent)
     {
         // 플레이어는 NavMesh 대신 CharacterController 사용
@@ -144,19 +152,47 @@ public class PlayerMovement : AgentMovement
     /// <summary>
     /// CharacterController와 Transform의 동기화 강제 실행
     /// UI 활성화 등에서 호출하여 위치 동기화 문제를 해결
+    /// 3초마다 한 번씩만 실행되도록 제한됨
     /// </summary>
     public void ForceSyncCharacterController()
     {
         if (controller == null) return;
 
+        // 3초마다 한 번씩만 실행
+        if (Time.time - lastSyncTime < SYNC_INTERVAL)
+        {
+            Debug.Log($"ForceSyncCharacterController: {SYNC_INTERVAL}초 간격 제한으로 실행 건너뜀");
+            return;
+        }
+
+        lastSyncTime = Time.time;
+
         Debug.Log($"동기화 전 - Transform: {transform.position}, CC velocity: {controller.velocity}, grounded: {controller.isGrounded}");
+
+        // CharacterController disable 전에 회전 값 저장
+        savedRotation = transform.rotation;
+        rotationNeedsRestore = true;
 
         controller.enabled = false;
         controller.enabled = true;
 
-
         Debug.Log($"동기화 후 - Transform: {transform.position}, CC velocity: {controller.velocity}, grounded: {controller.isGrounded}");
     }
 
+    /// <summary>
+    /// LateUpdate에서 회전 값 복원
+    /// CharacterController의 disable/enable로 인한 회전 값 리셋을 복구
+    /// </summary>
+    private void LateUpdate()
+    {
+        if (rotationNeedsRestore && controller != null)
+        {
+            // CharacterController가 회전 값을 리셋했으므로 원래 회전 값으로 복원
+            transform.rotation = savedRotation;
+            rotationNeedsRestore = false;
+
+            Debug.Log($"회전 값 복원 완료: {savedRotation.eulerAngles}");
+        }
+    }
 
 }
